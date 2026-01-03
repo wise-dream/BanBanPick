@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Valorant Map Ban</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+
+  <!-- ФОН -->
+  <div class="site-bg-layer">
+    <div class="site-bg-inner"></div>
+  </div>
+  
+  
+
+  <div id="finalOverlay" class="final-overlay">
+    <div class="final-card">
+      <div class="final-map-name" id="finalMapName"></div>
+      <div class="final-subtitle">Эта карта будет сыграна</div>
+      <button class="btn btn-accent" id="closeFinalBtn">OK</button>
+    </div>
+  </div>
+
+  <div id="sideOverlay" class="final-overlay" style="display:none;">
+    <div class="final-card side-final-card">
+      <div class="final-map-name" id="sideResult">ATTACK / DEFENCE</div>
+      <div class="final-subtitle" id="sideSubtitle">Выбор стороны...</div>
+      <button class="btn btn-accent" id="closeSideBtn">OK</button>
+    </div>
+  </div>
+
+  <div id="sideFullOverlay" class="side-overlay-fullscreen">
+    <div class="side-full-content">
+      <img id="sideFullIcon" class="side-full-icon" src="img/attack.png" alt="">
+      <div class="final-map-name" id="sideFullText">ATTACK / DEFENCE</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div>
+        <h1>Map Banning</h1>
+        <div class="tagline"></div>
+      </div>
+
+      <div class="top-bar"> 
+        <div class="teams">
+          <div class="team active" id="teamABox">
+            <span class="badge">A</span>
+            <input id="teamAName" class="team-name" type="text" value="Team A" />
+          </div>
+          <div class="team" id="teamBBox">
+            <span class="badge">B</span>
+            <input id="teamBName" class="team-name" type="text" value="Team B" />
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-accent" id="startBtn">Начать</button>
+          <button class="btn" id="swapBtn">Сменить ход</button>
+          <button class="btn" id="resetBtn">Сброс</button>
+          <button class="btn" id="sideBtn">Выбор стороны</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">All maps</div>
+          <div class="current-step">
+            Шаг:
+            <span id="stepLabel" class="pill step">
+              Нажмите «Начать», чтобы начать вето
+            </span>
+          </div>
+        </div>
+        <div class="maps-grid" id="mapsGrid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Лог и итог</div>
+        </div>
+
+        <div class="summary">
+          <div class="summary-title">Выбранная карта</div>
+          <div id="summaryContent">
+            Пока карта не выбрана. Баньте, пока не останется одна.
+          </div>
+        </div>
+
+        <div class="panel-header" style="margin-top:8px;">
+          <div class="panel-title" style="font-size:13px;">Ход вето</div>
+        </div>
+        <div class="log" id="logBox"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/index.js"></script>
+</body>
+</html>

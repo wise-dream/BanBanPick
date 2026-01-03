@@ -1,0 +1,603 @@
+openapi: 3.0.0
+info:
+  title: BBP API
+  description: API для системы выбора карт Valorant
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8080/api
+    description: Development server
+  - url: https://api.example.com/api
+    description: Production server
+
+tags:
+  - name: auth
+    description: Авторизация и аутентификация
+  - name: users
+    description: Управление пользователями
+  - name: veto
+    description: Сессии вето
+  - name: map-pools
+    description: Пулы карт
+  - name: rooms
+    description: Комнаты
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - auth
+      summary: Регистрация нового пользователя
+      description: Создает нового пользователя и возвращает JWT токен
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: user@example.com
+              username: testuser
+              password: password123
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Невалидные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email или username уже используется
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Вход пользователя
+      description: Аутентифицирует пользователя и возвращает JWT токен
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: password123
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Неверные учетные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      tags:
+        - auth
+      summary: Получить текущего пользователя
+      description: Возвращает данные текущего аутентифицированного пользователя
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/profile:
+    get:
+      tags:
+        - users
+      summary: Получить профиль пользователя
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - users
+      summary: Обновить профиль пользователя
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Профиль обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не авторизован
+        '409':
+          description: Username уже используется
+
+  /veto/sessions:
+    post:
+      tags:
+        - veto
+      summary: Создать сессию вето
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVetoSessionRequest'
+      responses:
+        '201':
+          description: Сессия создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VetoSessionResponse'
+        '400':
+          description: Невалидные данные
+
+  /veto/sessions/{id}:
+    get:
+      tags:
+        - veto
+      summary: Получить сессию вето
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Сессия вето
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VetoSessionResponse'
+        '404':
+          description: Сессия не найдена
+
+  /veto/sessions/{id}/ban:
+    post:
+      tags:
+        - veto
+      summary: Забанить карту
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BanMapRequest'
+      responses:
+        '200':
+          description: Карта забанена
+        '400':
+          description: Невалидные данные
+        '404':
+          description: Сессия не найдена
+
+  /rooms:
+    get:
+      tags:
+        - rooms
+      summary: Получить список публичных комнат
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Список комнат
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomsListResponse'
+
+    post:
+      tags:
+        - rooms
+      summary: Создать комнату
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoomRequest'
+      responses:
+        '201':
+          description: Комната создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomResponse'
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не авторизован
+
+  /rooms/{id}:
+    get:
+      tags:
+        - rooms
+      summary: Получить комнату
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Комната
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomResponse'
+        '404':
+          description: Комната не найдена
+
+    delete:
+      tags:
+        - rooms
+      summary: Удалить комнату
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Комната удалена
+        '401':
+          description: Не авторизован
+        '403':
+          description: Нет прав на удаление
+        '404':
+          description: Комната не найдена
+
+  /rooms/{id}/join:
+    post:
+      tags:
+        - rooms
+      summary: Присоединиться к комнате
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinRoomRequest'
+      responses:
+        '200':
+          description: Успешно присоединился
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomResponse'
+        '400':
+          description: Невалидные данные
+        '401':
+          description: Не авторизован
+        '403':
+          description: Комната полна или неверный код
+        '404':
+          description: Комната не найдена
+
+  /rooms/{id}/leave:
+    post:
+      tags:
+        - rooms
+      summary: Выйти из комнаты
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успешно вышел
+        '401':
+          description: Не авторизован
+        '404':
+          description: Комната не найдена
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - username
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+        password:
+          type: string
+          minLength: 6
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        username:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+
+    CreateVetoSessionRequest:
+      type: object
+      required:
+        - type
+        - team_a_name
+        - team_b_name
+        - game_id
+        - map_pool_id
+      properties:
+        type:
+          type: string
+          enum: [bo1, bo3, bo5]
+        team_a_name:
+          type: string
+        team_b_name:
+          type: string
+        game_id:
+          type: integer
+        map_pool_id:
+          type: integer
+
+    VetoSessionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        status:
+          type: string
+        team_a_name:
+          type: string
+        team_b_name:
+          type: string
+        selected_map:
+          type: object
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/VetoActionResponse'
+
+    VetoActionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        action_type:
+          type: string
+        map_id:
+          type: integer
+        team:
+          type: string
+
+    BanMapRequest:
+      type: object
+      required:
+        - map_id
+        - team
+      properties:
+        map_id:
+          type: integer
+        team:
+          type: string
+          enum: [A, B]
+
+    CreateRoomRequest:
+      type: object
+      required:
+        - name
+        - type
+        - game_id
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 50
+        type:
+          type: string
+          enum: [public, private]
+        game_id:
+          type: integer
+        map_pool_id:
+          type: integer
+        max_participants:
+          type: integer
+          minimum: 2
+          maximum: 20
+
+    JoinRoomRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 8
+
+    RoomResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        owner_id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+        game_id:
+          type: integer
+        map_pool_id:
+          type: integer
+        max_participants:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParticipantResponse'
+
+    ParticipantResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        role:
+          type: string
+        joined_at:
+          type: string
+          format: date-time
+
+    RoomsListResponse:
+      type: object
+      properties:
+        rooms:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomResponse'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
