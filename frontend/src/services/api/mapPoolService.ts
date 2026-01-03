@@ -1,11 +1,10 @@
-import { apiClient, handleApiResponse, handleApiError } from './client';
+import { apiClient, handleApiError } from './client';
 import type {
   MapPoolResponse,
   CreateCustomMapPoolRequest,
-  ApiError,
 } from './types';
 import type { MapPool } from '../../types';
-import { apiCache, generateCacheKey, withCache } from './cache';
+import { apiCache, generateCacheKey } from './cache';
 
 /**
  * Получение всех пулов для игры (с кешированием)

@@ -5,7 +5,7 @@ import { useI18n } from '../composables/useI18n';
 import { useAuthStore } from '../store/auth';
 import { useRoomCreationStore } from '../store/roomCreation';
 import StepIndicator from '../components/common/StepIndicator.vue';
-import { Copy, Eye, EyeOff, Check } from 'lucide-vue-next';
+import { Eye, EyeOff, Check } from 'lucide-vue-next';
 import * as roomApi from '../services/api/roomService';
 import type { ApiError } from '../services/api/types';
 import { validateCreateRoomForm } from '../utils/validation';
@@ -18,7 +18,7 @@ const roomCreationStore = useRoomCreationStore();
 const roomName = ref('');
 const roomPassword = ref('');
 const showPassword = ref(false);
-const showCodeCopied = ref(false);
+// const showCodeCopied = ref(false); // Не используется
 const errors = ref<Record<string, string>>({});
 const isLoading = ref(false);
 const createdRoom = ref<{ id: number; code: string } | null>(null);
@@ -89,19 +89,7 @@ const handleCreateRoom = async () => {
   }
 };
 
-const copyRoomCode = async () => {
-  if (!createdRoom.value) return;
-  
-  try {
-    await navigator.clipboard.writeText(createdRoom.value.code);
-    showCodeCopied.value = true;
-    setTimeout(() => {
-      showCodeCopied.value = false;
-    }, 2000);
-  } catch (err) {
-    console.error('Failed to copy code:', err);
-  }
-};
+// Функция copyRoomCode удалена, так как не используется
 
 const handleBack = () => {
   router.push('/create-room/best-of');

@@ -3,16 +3,18 @@ import type { ApiError } from './types';
 /**
  * Классификация ошибок API
  */
-export enum ErrorType {
-  NETWORK = 'NETWORK',
-  VALIDATION = 'VALIDATION',
-  AUTHENTICATION = 'AUTHENTICATION',
-  AUTHORIZATION = 'AUTHORIZATION',
-  NOT_FOUND = 'NOT_FOUND',
-  CONFLICT = 'CONFLICT',
-  SERVER = 'SERVER',
-  UNKNOWN = 'UNKNOWN',
-}
+export const ErrorType = {
+  NETWORK: 'NETWORK',
+  VALIDATION: 'VALIDATION',
+  AUTHENTICATION: 'AUTHENTICATION',
+  AUTHORIZATION: 'AUTHORIZATION',
+  NOT_FOUND: 'NOT_FOUND',
+  CONFLICT: 'CONFLICT',
+  SERVER: 'SERVER',
+  UNKNOWN: 'UNKNOWN',
+} as const;
+
+export type ErrorType = typeof ErrorType[keyof typeof ErrorType];
 
 /**
  * Классифицирует ошибку по типу

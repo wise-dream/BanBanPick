@@ -1,6 +1,6 @@
 import type { AxiosError } from 'axios';
 import type { ApiError } from './types';
-import { canRetry, isNetworkError } from './errorHandler';
+import { canRetry } from './errorHandler';
 
 /**
  * Retry configuration

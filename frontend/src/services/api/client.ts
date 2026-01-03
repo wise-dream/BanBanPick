@@ -3,7 +3,7 @@ import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosRespon
 import { getToken, removeToken, isTokenExpired } from './auth';
 import { useAuthStore } from '../../store/auth';
 import type { ApiResponse, ApiError } from './types';
-import { getErrorMessage, logError, isAuthError, canRetry } from './errorHandler';
+import { logError } from './errorHandler';
 
 // Базовый URL API из переменных окружения
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';

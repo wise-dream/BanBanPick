@@ -4,7 +4,6 @@ import type {
   UpdateProfileRequest,
   VetoSessionResponse,
   RoomResponse,
-  ApiError,
 } from './types';
 
 /**

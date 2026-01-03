@@ -1,64 +1,54 @@
-import type { MapPool, Map } from '../types';
-import valorantData from '../data/valorant-maps.json';
+import type { MapPool, Map as GameMap } from '../types';
 import * as mapPoolApi from './api/mapPoolService';
-import type { ApiError } from './api/types';
 
 const STORAGE_KEY = 'custom_map_pools';
 
-interface ValorantData {
-  game: {
-    id: number;
-    name: string;
-    slug: string;
-  };
-  maps: Array<{
-    id: number;
-    name: string;
-    slug: string;
-    imageUrl: string;
-    isCompetitive: boolean;
-    isActive: boolean;
-  }>;
-  systemPools: Array<{
-    id: number;
-    gameId: number;
-    name: string;
-    type: string;
-    isSystem: boolean;
-    mapIds: number[];
-  }>;
+// Кеш для всех карт (получаются из первого системного пула через API)
+let cachedMaps: GameMap[] | null = null;
+
+/**
+ * Получить все карты (из API или из кеша)
+ */
+export async function getAllMaps(): Promise<GameMap[]> {
+  if (cachedMaps) {
+    return cachedMaps;
+  }
+
+  try {
+    // Получаем системные пулы и берем карты из первого пула
+    const pools = await mapPoolApi.getPools(1); // Valorant game_id = 1
+    const systemPool = pools.find(p => p.is_system && p.maps.length > 0);
+    
+    if (systemPool && systemPool.maps.length > 0) {
+      cachedMaps = systemPool.maps.map(m => ({
+        id: m.id,
+        name: m.name,
+        slug: m.slug,
+        imageUrl: m.image_url,
+        isCompetitive: m.is_competitive,
+      }));
+      return cachedMaps;
+    }
+  } catch (error) {
+    console.warn('Failed to load maps from API:', error);
+  }
+
+  // Fallback - пустой массив
+  return [];
 }
 
-const data = valorantData as ValorantData;
-
-// Получить все карты
-export function getAllMaps(): Map[] {
-  return data.maps
-    .filter(map => map.isActive)
-    .map(map => ({
-      id: map.id,
-      name: map.name,
-      slug: map.slug,
-      imageUrl: map.imageUrl,
-      isCompetitive: map.isCompetitive
-    }));
+/**
+ * Синхронная версия (использует кеш или возвращает пустой массив)
+ */
+export function getAllMapsSync(): GameMap[] {
+  return cachedMaps || [];
 }
 
-// Получить системные пулы
+// Получить системные пулы (fallback - пустой массив, так как данные теперь из API)
 export function getSystemPools(): MapPool[] {
-  const allMaps = getAllMaps();
-  const mapsById = new Map(allMaps.map(m => [m.id, m]));
-
-  return data.systemPools.map(pool => ({
-    id: pool.id,
-    gameId: pool.gameId,
-    name: pool.name,
-    type: pool.type as 'all' | 'competitive' | 'custom',
-    isSystem: pool.isSystem,
-    maps: pool.mapIds
-      .map(id => mapsById.get(id))
-      .filter((map): map is Map => map !== undefined)
-  }));
+  // Данные системных пулов теперь приходят из API
+  // Fallback возвращает пустой массив
+  return [];
 }
 
 // Получить кастомные пулы из localStorage
@@ -76,8 +66,8 @@ export function getCustomPools(): MapPool[] {
       mapIds: number[];
     }>;
     
-    const allMaps = getAllMaps();
-    const mapsById = new Map(allMaps.map(m => [m.id, m]));
+    // Для fallback из localStorage нужны карты, но они теперь только из API
+    // Возвращаем пулы без карт (maps будет пустым массивом)
 
     return pools.map(pool => ({
       id: pool.id,
@@ -85,9 +75,7 @@ export function getCustomPools(): MapPool[] {
       name: pool.name,
       type: pool.type as 'all' | 'competitive' | 'custom',
       isSystem: pool.isSystem,
-      maps: pool.mapIds
-        .map(id => mapsById.get(id))
-        .filter((map): map is Map => map !== undefined)
+      maps: [] // Карты теперь только из API, в fallback возвращаем пустой массив
     }));
   } catch (error) {
     console.error('Error loading custom pools:', error);

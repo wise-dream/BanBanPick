@@ -14,7 +14,6 @@ export interface RoomWebSocketOptions {
 
 export class RoomWebSocket {
   private ws: WebSocket | null = null;
-  private roomId: number;
   private url: string;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
@@ -27,7 +26,6 @@ export class RoomWebSocket {
   private shouldReconnect = true; // Флаг для предотвращения переподключения при явном disconnect
 
   constructor(roomId: number, options: RoomWebSocketOptions = {}) {
-    this.roomId = roomId;
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Используем VITE_WS_URL или извлекаем хост из VITE_API_URL, иначе используем localhost:8080
     let wsHost: string;

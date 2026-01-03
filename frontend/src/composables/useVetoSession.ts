@@ -1,9 +1,8 @@
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import * as vetoService from '../services/api/vetoService';
 import type {
   VetoSessionResponse,
   CreateVetoSessionRequest,
-  VetoActionResponse,
   NextActionResponse,
 } from '../services/api/types';
 import type { MapName, LogEntry } from '../types/veto';
@@ -71,9 +70,9 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
         if (mapId && mapsById.has(mapId)) {
           const mapName = mapsById.get(mapId)!;
           if (action.action_type === 'ban') {
-            bans.push(mapName);
+            bans.push(mapName as MapName);
           } else if (action.action_type === 'pick') {
-            picks.push(mapName);
+            picks.push(mapName as MapName);
           }
         }
       });
@@ -89,9 +88,9 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
       pickedMaps: picks,
       finished: session.value.status === 'finished',
       started: session.value.status === 'in_progress' || session.value.status === 'finished',
-      selectedMap: session.value.selected_map_id
-        ? mapsById.get(session.value.selected_map_id) || null
-        : null,
+      selectedMap: (session.value.selected_map_id
+        ? (mapsById.get(session.value.selected_map_id) as MapName | undefined) || null
+        : null) as MapName | null,
     };
   });
 
@@ -224,7 +223,24 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
     if (!map && options?.currentPool) {
       const pool = options.currentPool();
       if (pool?.maps) {
-        map = pool.maps.find(m => m.name === mapName);
+        const foundMap = pool.maps.find(m => m.name === mapName);
+        if (foundMap) {
+          // Проверяем тип карты - может быть Map (из types) или MapResponse (из API)
+          if ('slug' in foundMap && 'imageUrl' in foundMap) {
+            // Это Map из types (frontend тип)
+            const gameMap = foundMap as { id: number; name: string; slug: string; imageUrl: string; isCompetitive: boolean };
+            map = {
+              id: gameMap.id,
+              name: gameMap.name,
+              slug: gameMap.slug,
+              image_url: gameMap.imageUrl,
+              is_competitive: gameMap.isCompetitive,
+            };
+          } else if ('slug' in foundMap && 'image_url' in foundMap) {
+            // Это уже MapResponse (из API)
+            map = foundMap as any;
+          }
+        }
         console.log('Map found in currentPool fallback:', map);
       }
     }

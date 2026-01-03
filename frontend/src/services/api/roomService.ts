@@ -1,10 +1,8 @@
-import { apiClient, handleApiResponse, handleApiError } from './client';
+import { apiClient, handleApiError } from './client';
 import type {
   RoomResponse,
   CreateRoomRequest,
-  JoinRoomRequest,
   ParticipantResponse,
-  ApiError,
   PaginatedResponse,
 } from './types';
 import { apiCache, generateCacheKey } from './cache';
@@ -167,7 +165,7 @@ export async function updateRoom(
 /**
  * Преобразование RoomResponse в Room (для совместимости)
  */
-import type { Room, RoomParticipant } from '../../types';
+import type { Room } from '../../types';
 
 export function roomResponseToRoom(response: RoomResponse): Room {
   return {
@@ -183,11 +181,11 @@ export function roomResponseToRoom(response: RoomResponse): Room {
     maxParticipants: response.max_participants,
     createdAt: response.created_at,
     updatedAt: response.updated_at,
-    participants: response.participants?.map(p => ({
+    participants: response.participants?.map((p: ParticipantResponse) => ({
       id: p.id,
       roomId: response.id,
       userId: p.user_id,
-      username: p.username, // Никнейм пользователя
+      username: p.username || p.user?.username, // Никнейм пользователя из поля username или из user
       role: p.role as 'owner' | 'member',
       joinedAt: p.joined_at,
     })) || [],

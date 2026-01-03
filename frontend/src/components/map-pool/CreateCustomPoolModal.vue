@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { X } from 'lucide-vue-next';
 import { getAllMaps, saveCustomPool } from '../../services/mapPoolService';
+import type { Map } from '../../types';
 import { useI18n } from '../../composables/useI18n';
 
 interface Props {
@@ -22,10 +23,15 @@ const selectedMapIds = ref<number[]>([]);
 const error = ref('');
 const isLoading = ref(false);
 
-const allMaps = getAllMaps();
+const allMaps = ref<Map[]>([]);
+
+// Загружаем карты при монтировании
+onMounted(async () => {
+  allMaps.value = await getAllMaps();
+});
 
 const selectedMaps = computed(() => {
-  return allMaps.filter(map => selectedMapIds.value.includes(map.id));
+  return allMaps.value.filter((map: Map) => selectedMapIds.value.includes(map.id));
 });
 
 const toggleMap = (mapId: number) => {

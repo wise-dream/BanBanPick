@@ -1,10 +1,9 @@
-import { apiClient, handleApiResponse, handleApiError } from './client';
+import { apiClient, handleApiError } from './client';
 import type {
   RegisterRequest,
   LoginRequest,
   AuthResponse,
   UserResponse,
-  ApiError,
 } from './types';
 
 /**

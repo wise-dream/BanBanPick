@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { getCurrentUser } from '../services/api/authService';
-import { getToken, isTokenValid, checkTokenAndLogoutIfExpired, getTokenTimeUntilExpiration } from '../services/api/auth';
+import { getToken, isTokenValid, checkTokenAndLogoutIfExpired } from '../services/api/auth';
 import type { ApiError } from '../services/api/types';
 
 export interface User {

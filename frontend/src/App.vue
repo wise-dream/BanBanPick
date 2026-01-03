@@ -3,13 +3,6 @@ import { RouterView } from 'vue-router';
 import Header from './components/layout/Header.vue';
 import Footer from './components/layout/Footer.vue';
 import BackgroundLayer from './components/BackgroundLayer.vue';
-import ErrorToast from './components/common/ErrorToast.vue';
-import Loader from './components/common/Loader.vue';
-import { useErrorToast } from './composables/useErrorToast';
-import { useOffline } from './composables/useOffline';
-
-const { toasts, removeToast } = useErrorToast();
-const { isOffline, wasOffline } = useOffline();
 </script>
 
 <template>

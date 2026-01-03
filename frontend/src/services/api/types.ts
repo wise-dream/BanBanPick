@@ -133,7 +133,7 @@ export interface RoomResponse {
   veto_session?: VetoSessionResponse;
   max_participants: number;
   participants_count: number;
-  participants: RoomParticipant[];
+  participants: ParticipantResponse[];
   created_at: string;
   updated_at: string;
 }
@@ -159,7 +159,8 @@ export interface UpdateRoomRequest {
 export interface ParticipantResponse {
   id: number;
   user_id: number;
-  user: UserResponse;
+  user?: UserResponse;
+  username?: string; // Никнейм пользователя (может приходить напрямую от бэкенда или из user)
   role: string;
   joined_at: string;
 }

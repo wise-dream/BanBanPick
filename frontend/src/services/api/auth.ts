@@ -29,7 +29,7 @@ export function removeToken(): void {
 export function isTokenExpired(token: string): boolean {
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) {
+    if (parts.length !== 3 || !parts[1]) {
       return true; // Невалидный формат токена
     }
 
@@ -58,7 +58,7 @@ export function isTokenExpired(token: string): boolean {
 export function getUserIdFromToken(token: string): number | null {
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) {
+    if (parts.length !== 3 || !parts[1]) {
       return null;
     }
 
@@ -110,7 +110,7 @@ export function checkTokenAndLogoutIfExpired(): boolean {
 export function getTokenExpirationTime(token: string): number | null {
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) {
+    if (parts.length !== 3 || !parts[1]) {
       return null;
     }
 
