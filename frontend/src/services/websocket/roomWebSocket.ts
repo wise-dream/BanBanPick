@@ -37,7 +37,7 @@ export class RoomWebSocket {
       wsHost = apiUrl.host;
     } else {
       // Fallback на localhost:8080 для бэкенда
-      wsHost = 'localhost:8080';
+      wsHost =  'ban.wise-dream.site';
     }
     this.url = `${wsProtocol}//${wsHost}/ws/room/${roomId}`;
     this.options = options;

@@ -6,7 +6,8 @@ import type { ApiResponse, ApiError } from './types';
 import { logError } from './errorHandler';
 
 // Базовый URL API из переменных окружения
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'https://ban.wise-dream.site';
 
 /**
  * Создает и настраивает экземпляр axios клиента
