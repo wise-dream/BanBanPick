@@ -46,9 +46,9 @@ const mapPoolOptions = computed(() => {
 });
 
 const bestOfOptions = computed(() => [
-  { label: 'Best of 1', value: 'bo1' },
-  { label: 'Best of 3', value: 'bo3' },
-  { label: 'Best of 5', value: 'bo5' }
+  { label: t('bestOf.bo1'), value: 'bo1' },
+  { label: t('bestOf.bo3'), value: 'bo3' },
+  { label: t('bestOf.bo5'), value: 'bo5' }
 ]);
 
 // Загружаем пулы при монтировании

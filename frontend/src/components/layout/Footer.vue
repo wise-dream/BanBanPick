@@ -11,7 +11,7 @@ const router = useRouter();
   <footer class="app-footer">
     <div class="footer-container">
       <div class="footer-logo" @click="router.push('/')">
-        <h2>MapBan</h2>
+        <h2>{{ t('header.appName') }}</h2>
       </div>
       <div class="footer-bottom">
         <p>&copy; {{ new Date().getFullYear() }} MapBan – {{ t('footer.copyright') }}</p>

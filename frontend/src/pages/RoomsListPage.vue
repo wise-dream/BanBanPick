@@ -139,7 +139,7 @@ const handleCreateRoom = async (roomData: {
     router.push(`/room/${newRoom.id}`);
   } catch (err) {
     const apiError = err as ApiError;
-    error.value = apiError.message || 'Не удалось создать комнату';
+    error.value = apiError.message || t('errors.roomCreateError');
     console.error('Error creating room:', err);
   } finally {
     isLoading.value = false;
@@ -322,7 +322,7 @@ const hasRooms = computed(() => filteredRooms.value.length > 0);
       </div>
 
       <div v-if="isLoading" class="loading-state">
-        <p>Loading rooms...</p>
+        <p>{{ t('rooms.loadingRooms') }}</p>
       </div>
 
       <div v-else-if="hasRooms" class="rooms-grid">

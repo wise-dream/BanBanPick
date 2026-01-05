@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from '../../composables/useI18n';
+
+const { t } = useI18n();
+
 interface Props {
   currentStep: number;
   totalSteps?: number;
@@ -20,7 +24,7 @@ const steps = Array.from({ length: props.totalSteps }, (_, i) => i + 1);
       :class="{ active: step === currentStep, completed: step < currentStep }"
     >
       <div class="step-number">{{ step }}</div>
-      <div class="step-label">Step {{ step }}</div>
+      <div class="step-label">{{ t('stepIndicator.step') }} {{ step }}</div>
     </div>
   </div>
 </template>

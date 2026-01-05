@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { X, AlertCircle } from 'lucide-vue-next';
+import { useI18n } from '../../composables/useI18n';
+
+const { t } = useI18n();
 
 interface Props {
   message: string;
@@ -48,7 +51,7 @@ const close = () => {
       <div class="toast-content">
         <AlertCircle :size="20" class="toast-icon" />
         <span class="toast-message">{{ message }}</span>
-        <button class="toast-close" @click="close" aria-label="Close">
+        <button class="toast-close" @click="close" :aria-label="t('errorToast.close')">
           <X :size="16" />
         </button>
       </div>

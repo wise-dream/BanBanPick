@@ -1037,7 +1037,7 @@ const loadSessionById = async (id: number) => {
             currentPool.value = pool
             initializeMapsState()
           } else {
-            error.value = 'Пул карт не содержит карт'
+            error.value = t('errors.poolEmpty')
           }
         }
       } else if (vetoSession.session.value.map_pool_id) {
@@ -1102,7 +1102,7 @@ const loadSessionByToken = async (token: string) => {
             currentPool.value = pool
             initializeMapsState()
           } else {
-            error.value = 'Пул карт не содержит карт'
+            error.value = t('errors.poolEmpty')
           }
         }
       } else if (vetoSession.session.value.map_pool_id) {
@@ -1123,7 +1123,7 @@ const loadSessionByToken = async (token: string) => {
       }
     }
   } catch (err: any) {
-    const errorMessage = err.message || 'Не удалось загрузить сессию'
+    const errorMessage = err.message || t('errors.sessionLoadError')
     error.value = errorMessage
     showErrorToast(err)
   } finally {
@@ -2280,7 +2280,7 @@ async function handleSelectSide(side: 'attack' | 'defence') {
   })
   
   if (!needsSideSelection.value) {
-    showErrorToast({ code: '', message: 'Выбор стороны сейчас недоступен' } as any)
+    showErrorToast({ code: '', message: t('veto.sideSelectionUnavailable') } as any)
     return
   }
   

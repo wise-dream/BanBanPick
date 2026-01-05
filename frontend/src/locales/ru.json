@@ -60,7 +60,16 @@
     "login": "Вход",
     "register": "Регистрация",
     "logout": "Выход",
-    "cancel": "Отмена"
+    "cancel": "Отмена",
+    "optional": "Опционально",
+    "back": "Назад",
+    "retry": "Повторить",
+    "loading": "Загрузка...",
+    "save": "Сохранить",
+    "ok": "OK",
+    "close": "Закрыть",
+    "select": "Выбрать",
+    "step": "Шаг"
   },
   "veto": {
     "start": "Начать",
@@ -110,7 +119,13 @@
   "bestOf": {
     "title": "Выберите Best of",
     "description": "Выберите Best of 1, 3 или 5",
-    "hint": "Например, 'Best Of 5' означает, что команда, которая выиграет 3 карты, выигрывает серию."
+    "hint": "Например, 'Best Of 5' означает, что команда, которая выиграет 3 карты, выигрывает серию.",
+    "selectBestOfPlaceholder": "Выберите Best of",
+    "selectRoomTypePlaceholder": "Выберите тип комнаты",
+    "bo1": "Best of 1",
+    "bo3": "Best of 3",
+    "bo5": "Best of 5",
+    "label": "Best of {value}"
   },
   "createRoom": {
     "title": "Создать комнату",
@@ -196,7 +211,17 @@
     "hidePassword": "Скрыть пароль",
     "back": "Назад",
     "retry": "Повторить",
-    "loading": "Загрузка..."
+    "loading": "Загрузка комнат...",
+    "loadingRooms": "Загрузка комнат...",
+    "settings": {
+      "title": "Настройки комнаты",
+      "vetoTypeLabel": "Тип вето (Best of)",
+      "vetoTypePlaceholder": "Выберите тип вето",
+      "mapPoolLabel": "Пул карт",
+      "mapPoolPlaceholder": "Выберите пул карт",
+      "saving": "Сохранение...",
+      "selectPoolPlaceholder": "Выберите пул карт"
+    }
   },
   "profile": {
     "title": "Мой профиль",
@@ -208,7 +233,8 @@
     "sessions": "Сессии вето",
     "noSessions": "У вас пока нет сессий вето",
     "rooms": "Мои комнаты",
-    "noRooms": "У вас пока нет комнат"
+    "noRooms": "У вас пока нет комнат",
+    "updateUsernameError": "Имя пользователя уже занято"
   },
   "common": {
     "home": "Главная",
@@ -268,25 +294,10 @@
     "goHome": "Вернуться на главную"
   },
   "footer": {
+    "followUs": "Следите за нами",
+    "other": "Другое",
+    "legal": "Правовая информация",
     "copyright": "Все права защищены"
-  },
-  "rooms": {
-    "settings": {
-      "title": "Настройки комнаты",
-      "vetoTypeLabel": "Тип вето (Best of)",
-      "vetoTypePlaceholder": "Выберите тип вето",
-      "mapPoolLabel": "Пул карт",
-      "mapPoolPlaceholder": "Выберите пул карт",
-      "saving": "Сохранение...",
-      "selectPoolPlaceholder": "Выберите пул карт"
-    }
-  },
-  "bestOf": {
-    "selectBestOfPlaceholder": "Выберите Best of",
-    "selectRoomTypePlaceholder": "Выберите тип комнаты"
-  },
-  "profile": {
-    "updateUsernameError": "Имя пользователя уже занято"
   },
   "vetoSession": {
     "sessionCreated": "Сессия вето {type} создана.",
@@ -308,5 +319,36 @@
     "banAction": "{teamName} банит карту {mapName}.",
     "pickAction": "{teamName} выбирает карту {mapName}.",
     "autoPick": "Автопик: последняя оставшаяся карта {mapName} выбирается для игры."
+  },
+  "header": {
+    "appName": "MapBan",
+    "toggleMenu": "Переключить меню"
+  },
+  "navigation": {
+    "home": "Главная",
+    "rooms": "Комнаты",
+    "profile": "Профиль"
+  },
+  "stepIndicator": {
+    "step": "Шаг"
+  },
+  "languageSelector": {
+    "placeholder": "Выбрать язык"
+  },
+  "mapPoolCard": {
+    "system": "Системный",
+    "maps": "Карты",
+    "createYourOwn": "Создайте свой пул карт",
+    "select": "Выбрать"
+  },
+  "createCustomPool": {
+    "competitive": "Соревновательная",
+    "close": "Закрыть"
+  },
+  "errorToast": {
+    "close": "Закрыть"
+  },
+  "createRoomFinal": {
+    "bestOfLabel": "Best of {value}"
   }
 }

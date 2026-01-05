@@ -158,7 +158,7 @@ const createError = ref<string | null>(null);
             </div>
             <div class="summary-item">
               <span class="summary-label">{{ t('bestOf.title') }}:</span>
-              <span class="summary-value">Best of {{ roomCreationStore.bestOf }}</span>
+              <span class="summary-value">{{ t('createRoomFinal.bestOfLabel', { value: roomCreationStore.bestOf }) }}</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">{{ t('rooms.maxParticipants') }}:</span>

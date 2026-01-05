@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from '../../composables/useI18n';
 import type { MapPool } from '../../types';
+
+const { t } = useI18n();
 
 interface Props {
   pool: MapPool;
@@ -32,18 +35,18 @@ const handleClick = () => {
   >
     <div class="card-header">
       <h3>{{ pool.name }}</h3>
-      <span v-if="pool.isSystem" class="system-badge">System</span>
+      <span v-if="pool.isSystem" class="system-badge">{{ t('mapPoolCard.system') }}</span>
     </div>
     <div class="card-content">
       <p class="maps-list">
-        <strong>Maps:</strong> {{ mapsList }}
+        <strong>{{ t('mapPoolCard.maps') }}:</strong> {{ mapsList }}
       </p>
       <p v-if="pool.type === 'custom'" class="custom-note">
-        Create your own map pool
+        {{ t('mapPoolCard.createYourOwn') }}
       </p>
     </div>
     <div class="card-footer">
-      <button class="btn-select">Select</button>
+      <button class="btn-select">{{ t('mapPoolCard.select') }}</button>
     </div>
   </div>
 </template>

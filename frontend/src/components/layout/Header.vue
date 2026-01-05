@@ -2,8 +2,11 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../store/auth';
+import { useI18n } from '../../composables/useI18n';
 import Navigation from './Navigation.vue';
 import LanguageSelector from '../common/LanguageSelector.vue';
+
+const { t } = useI18n();
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -23,7 +26,7 @@ const navigateToHome = () => {
   <header class="app-header">
     <div class="header-container">
       <div class="logo" @click="navigateToHome">
-        <h1>MapBan</h1>
+        <h1>{{ t('header.appName') }}</h1>
       </div>
 
       <Navigation
@@ -39,21 +42,21 @@ const navigateToHome = () => {
             {{ authStore.user?.username }}
           </button>
           <button class="btn btn-secondary" @click="authStore.logout(); router.push('/')">
-            Выход
+            {{ t('common.logout') }}
           </button>
         </div>
         <div v-else class="auth-buttons">
           <button class="btn btn-primary" @click="router.push('/login')">
-            Sign In
+            {{ t('common.login') }}
           </button>
           <button class="btn btn-secondary" @click="router.push('/register')">
-            Register
+            {{ t('common.register') }}
           </button>
         </div>
         <button
           class="mobile-menu-toggle"
           @click="toggleMobileMenu"
-          aria-label="Toggle menu"
+          :aria-label="t('header.toggleMenu')"
         >
           <span></span>
           <span></span>

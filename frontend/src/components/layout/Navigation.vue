@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router';
+import { useI18n } from '../../composables/useI18n';
+
+const { t } = useI18n();
 
 interface Props {
   isMobileMenuOpen: boolean;
@@ -16,9 +19,9 @@ const router = useRouter();
 const route = useRoute();
 
 const navItems = [
-  { name: 'Home', path: '/', key: 'home' },
-  { name: 'Rooms', path: '/rooms', key: 'rooms' },
-  { name: 'Profile', path: '/profile', key: 'profile', requiresAuth: true }
+  { name: () => t('navigation.home'), path: '/', key: 'home' },
+  { name: () => t('navigation.rooms'), path: '/rooms', key: 'rooms' },
+  { name: () => t('navigation.profile'), path: '/profile', key: 'profile', requiresAuth: true }
 ];
 
 const navigate = (path: string) => {
@@ -45,7 +48,7 @@ const isActive = (path: string) => {
           :class="{ active: isActive(item.path) }"
           class="nav-link"
         >
-          {{ item.name }}
+          {{ typeof item.name === 'function' ? item.name() : item.name }}
         </a>
       </li>
     </ul>

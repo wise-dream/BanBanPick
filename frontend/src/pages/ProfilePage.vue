@@ -133,7 +133,7 @@ const formatDate = (dateString: string) => {
   <div class="profile-page">
     <div class="page-container">
       <div v-if="isLoading && !profile" class="loading-state">
-        <p>{{ t('common.loading') || 'Загрузка...' }}</p>
+        <p>{{ t('common.loading') }}</p>
       </div>
 
       <div v-else-if="error" class="error-state">
@@ -145,7 +145,7 @@ const formatDate = (dateString: string) => {
 
       <div v-else-if="profile" class="profile-content">
         <div class="profile-header">
-          <h1 class="page-title">{{ t('profile.title') || 'Мой профиль' }}</h1>
+          <h1 class="page-title">{{ t('profile.title') }}</h1>
         </div>
 
         <!-- Profile Info Section -->

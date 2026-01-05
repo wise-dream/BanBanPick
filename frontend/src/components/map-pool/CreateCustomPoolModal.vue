@@ -104,7 +104,7 @@ watch(() => props.isOpen, (isOpen) => {
     <div class="modal-content">
       <div class="modal-header">
         <h2>{{ t('mapPool.createCustomPool') }}</h2>
-        <button class="close-button" @click="handleClose" aria-label="Close">
+        <button class="close-button" @click="handleClose" :aria-label="t('createCustomPool.close')">
           <X :size="24" />
         </button>
       </div>
@@ -136,7 +136,7 @@ watch(() => props.isOpen, (isOpen) => {
               @click="toggleMap(map.id)"
             >
               <span class="map-name">{{ map.name }}</span>
-              <span v-if="map.isCompetitive" class="competitive-badge">Competitive</span>
+              <span v-if="map.isCompetitive" class="competitive-badge">{{ t('createCustomPool.competitive') }}</span>
             </button>
           </div>
         </div>

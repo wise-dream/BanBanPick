@@ -4,7 +4,7 @@ import { Globe } from 'lucide-vue-next';
 import { useI18n } from '../../composables/useI18n';
 import Select from 'primevue/select';
 
-const { currentLocale, availableLocales, setLocale } = useI18n();
+const { currentLocale, availableLocales, setLocale, t } = useI18n();
 
 // Безопасное получение текущей локали с fallback
 const safeCurrentLocale = computed(() => {
@@ -42,7 +42,7 @@ const selectedLocale = computed({
       v-model="selectedLocale"
       :options="localeOptions"
       optionLabel="label"
-      placeholder="Select language"
+      :placeholder="t('languageSelector.placeholder')"
       class="language-select-pv"
     >
       <template #value="slotProps">

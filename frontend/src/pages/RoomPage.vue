@@ -45,9 +45,9 @@
 
   // Опции для PrimeVue Select
   const vetoTypeOptions = computed(() => [
-    { label: 'Best of 1', value: 'bo1' },
-    { label: 'Best of 3', value: 'bo3' },
-    { label: 'Best of 5', value: 'bo5' }
+    { label: t('bestOf.bo1'), value: 'bo1' },
+    { label: t('bestOf.bo3'), value: 'bo3' },
+    { label: t('bestOf.bo5'), value: 'bo5' }
   ])
 
   const mapPoolOptionsForSettings = computed(() => [
@@ -363,7 +363,7 @@
       availablePools.value = pools
     } catch (err) {
       console.error('Error loading pools:', err)
-      error.value = 'Не удалось загрузить пулы карт'
+      error.value = t('errors.poolsLoadError')
       return
     }
     

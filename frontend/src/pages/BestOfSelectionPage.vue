@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from '../composables/useI18n';
 import { useAuthStore } from '../store/auth';
@@ -28,11 +28,11 @@ onMounted(() => {
   }
 });
 
-const bestOfOptions: Array<{ value: BestOfType; label: string; stars: number }> = [
-  { value: 1, label: 'Best of 1', stars: 1 },
-  { value: 3, label: 'Best of 3', stars: 3 },
-  { value: 5, label: 'Best of 5', stars: 0 } // 0 означает сплошной круг
-];
+const bestOfOptions = computed(() => [
+  { value: 1 as BestOfType, label: t('bestOf.bo1'), stars: 1 },
+  { value: 3 as BestOfType, label: t('bestOf.bo3'), stars: 3 },
+  { value: 5 as BestOfType, label: t('bestOf.bo5'), stars: 0 } // 0 означает сплошной круг
+]);
 
 const handleSelectBestOf = (value: BestOfType) => {
   selectedBestOf.value = value;

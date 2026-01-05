@@ -14,9 +14,9 @@ const props = defineProps<Props>();
 
 const summaryText = computed(() => {
   if (!props.pickedMap) {
-    return 'Пока карта не выбрана. Баньте, пока не останется одна.';
+    return t('veto.noMapSelected');
   }
-  return `Играется карта: ${props.pickedMap}. Сторону выбираете при заходе в лобби.`;
+  return t('veto.mapWillBePlayed', { mapName: props.pickedMap });
 });
 </script>
 

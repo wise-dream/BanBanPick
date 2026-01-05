@@ -60,7 +60,16 @@
     "login": "Sign In",
     "register": "Register",
     "logout": "Logout",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "optional": "Optional",
+    "back": "Back",
+    "retry": "Retry",
+    "loading": "Loading...",
+    "save": "Save",
+    "ok": "OK",
+    "close": "Close",
+    "select": "Select",
+    "step": "Step"
   },
   "veto": {
     "start": "Start",
@@ -110,7 +119,13 @@
   "bestOf": {
     "title": "Select Best of",
     "description": "Choose Best of 1, 3 or 5",
-    "hint": "For example 'Best Of 5' means the team that wins 3 maps, wins the series."
+    "hint": "For example 'Best Of 5' means the team that wins 3 maps, wins the series.",
+    "selectBestOfPlaceholder": "Select Best of",
+    "selectRoomTypePlaceholder": "Select room type",
+    "bo1": "Best of 1",
+    "bo3": "Best of 3",
+    "bo5": "Best of 5",
+    "label": "Best of {value}"
   },
   "createRoom": {
     "title": "Create Room",
@@ -196,7 +211,17 @@
     "hidePassword": "Hide password",
     "back": "Back",
     "retry": "Retry",
-    "loading": "Loading..."
+    "loading": "Loading rooms...",
+    "loadingRooms": "Loading rooms...",
+    "settings": {
+      "title": "Room Settings",
+      "vetoTypeLabel": "Veto Type (Best of)",
+      "vetoTypePlaceholder": "Select veto type",
+      "mapPoolLabel": "Map Pool",
+      "mapPoolPlaceholder": "Select map pool",
+      "saving": "Saving...",
+      "selectPoolPlaceholder": "Select map pool"
+    }
   },
   "profile": {
     "title": "My Profile",
@@ -208,7 +233,8 @@
     "sessions": "Veto Sessions",
     "noSessions": "You don't have any veto sessions yet",
     "rooms": "My Rooms",
-    "noRooms": "You don't have any rooms yet"
+    "noRooms": "You don't have any rooms yet",
+    "updateUsernameError": "Username is already taken"
   },
   "common": {
     "home": "Home",
@@ -268,25 +294,10 @@
     "goHome": "Go to Home"
   },
   "footer": {
+    "followUs": "Follow Us",
+    "other": "Other",
+    "legal": "Legal",
     "copyright": "All rights reserved"
-  },
-  "rooms": {
-    "settings": {
-      "title": "Room Settings",
-      "vetoTypeLabel": "Veto Type (Best of)",
-      "vetoTypePlaceholder": "Select veto type",
-      "mapPoolLabel": "Map Pool",
-      "mapPoolPlaceholder": "Select map pool",
-      "saving": "Saving...",
-      "selectPoolPlaceholder": "Select map pool"
-    }
-  },
-  "bestOf": {
-    "selectBestOfPlaceholder": "Select Best of",
-    "selectRoomTypePlaceholder": "Select room type"
-  },
-  "profile": {
-    "updateUsernameError": "Username is already taken"
   },
   "vetoSession": {
     "sessionCreated": "Veto session {type} created.",
@@ -308,5 +319,36 @@
     "banAction": "{teamName} bans map {mapName}.",
     "pickAction": "{teamName} picks map {mapName}.",
     "autoPick": "Autopick: the last remaining map {mapName} is selected for play."
+  },
+  "header": {
+    "appName": "MapBan",
+    "toggleMenu": "Toggle menu"
+  },
+  "navigation": {
+    "home": "Home",
+    "rooms": "Rooms",
+    "profile": "Profile"
+  },
+  "stepIndicator": {
+    "step": "Step"
+  },
+  "languageSelector": {
+    "placeholder": "Select language"
+  },
+  "mapPoolCard": {
+    "system": "System",
+    "maps": "Maps",
+    "createYourOwn": "Create your own map pool",
+    "select": "Select"
+  },
+  "createCustomPool": {
+    "competitive": "Competitive",
+    "close": "Close"
+  },
+  "errorToast": {
+    "close": "Close"
+  },
+  "createRoomFinal": {
+    "bestOfLabel": "Best of {value}"
   }
 }
