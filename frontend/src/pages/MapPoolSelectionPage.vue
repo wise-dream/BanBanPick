@@ -51,7 +51,7 @@ const loadPools = async () => {
     
     pools.value = [...apiPools, customPoolCard];
   } catch (err) {
-    error.value = 'Не удалось загрузить пулы карт';
+    error.value = t('errors.poolsLoadError');
     console.error('Error loading pools:', err);
   } finally {
     isLoading.value = false;

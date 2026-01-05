@@ -7,6 +7,7 @@ import type {
 } from '../services/api/types';
 import type { MapName, LogEntry } from '../types/veto';
 import { useErrorToast } from './useErrorToast';
+import { useI18n } from './useI18n';
 
 export interface VetoSessionState {
   sessionId: number | null;
@@ -123,8 +124,8 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
       sessionId.value = createdSession.id;
       
       logEntries.value = [];
-      log(`Сессия вето ${type.toUpperCase()} создана.`);
-      log(`Команда A: ${teamAName}, Команда B: ${teamBName}.`);
+      log(t('vetoSession.sessionCreated', { type: type.toUpperCase() }));
+      log(t('vetoSession.teamInfo', { teamA: teamAName, teamB: teamBName }));
 
       return true;
     } catch (err: any) {
@@ -170,7 +171,7 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
 
       return true;
     } catch (err: any) {
-      error.value = err.message || 'Не удалось загрузить сессию';
+      error.value = err.message || t('vetoSession.loadError');
       showError(error.value);
       return false;
     } finally {
@@ -251,7 +252,7 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
         currentPool: options?.currentPool?.(),
         availableMaps: session.value.map_pool?.maps?.map(m => m.name)
       });
-      error.value = 'Карта не найдена';
+      error.value = t('vetoSession.mapNotFound');
       return false;
     }
 
@@ -266,13 +267,14 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
       );
 
       session.value = updatedSession;
-      log(`${state.value.currentTeam === 'A' ? session.value.team_a_name : session.value.team_b_name} банит карту ${mapName}.`);
+      const teamName = state.value.currentTeam === 'A' ? session.value.team_a_name : session.value.team_b_name;
+      log(t('vetoSession.banAction', { teamName, mapName }));
 
       // Если сессия завершена
       if (updatedSession.status === 'finished' && updatedSession.selected_map_id) {
         const selectedMap = session.value.map_pool?.maps.find(m => m.id === updatedSession.selected_map_id);
         if (selectedMap) {
-          log(`Автопик: последняя оставшаяся карта ${selectedMap.name} выбирается для игры.`);
+          log(t('vetoSession.autoPick', { mapName: selectedMap.name }));
         }
       }
 
@@ -297,7 +299,7 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
 
     const map = session.value.map_pool?.maps.find(m => m.name === mapName);
     if (!map) {
-      error.value = 'Карта не найдена';
+      error.value = t('vetoSession.mapNotFound');
       return false;
     }
 
@@ -312,11 +314,50 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
       );
 
       session.value = updatedSession;
-      log(`${state.value.currentTeam === 'A' ? session.value.team_a_name : session.value.team_b_name} выбирает карту ${mapName}.`);
+      const teamName = state.value.currentTeam === 'A' ? session.value.team_a_name : session.value.team_b_name;
+      log(t('vetoSession.pickAction', { teamName, mapName }));
 
       return true;
     } catch (err: any) {
-      error.value = err.message || 'Не удалось выбрать карту';
+      error.value = err.message || t('vetoSession.pickError');
+      showError(error.value);
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Выбор стороны (attack/defence) после пика карты
+   */
+  async function selectSide(side: 'attack' | 'defence', team: 'A' | 'B'): Promise<boolean> {
+    if (!session.value || !sessionId.value) {
+      error.value = 'Сессия не загружена';
+      return false;
+    }
+
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const updatedSession = await vetoService.selectSide(
+        sessionId.value,
+        side,
+        team
+      );
+
+      session.value = updatedSession;
+      
+      // Пересобираем лог из действий после обновления сессии
+      rebuildLogFromActions();
+      
+      const sideText = side === 'attack' ? t('vetoSession.sideAttack') : t('vetoSession.sideDefence');
+      const teamName = team === 'A' ? session.value.team_a_name : session.value.team_b_name;
+      log(t('vetoSession.sideSelected', { teamName, sideText }));
+
+      return true;
+    } catch (err: any) {
+      error.value = err.message || t('vetoSession.selectSideError');
       showError(error.value);
       return false;
     } finally {
@@ -339,11 +380,11 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
       const resetSession = await vetoService.resetSession(sessionId.value);
       session.value = resetSession;
       logEntries.value = [];
-      log('Сессия сброшена.');
+      log(t('vetoSession.reset'));
 
       return true;
     } catch (err: any) {
-      error.value = err.message || 'Не удалось сбросить сессию';
+      error.value = err.message || t('vetoSession.resetError');
       showError(error.value);
       return false;
     } finally {
@@ -362,7 +403,7 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
     try {
       return await vetoService.getNextAction(sessionId.value);
     } catch (err: any) {
-      error.value = err.message || 'Не удалось получить следующее действие';
+      error.value = err.message || t('vetoSession.nextActionError');
       return null;
     }
   }
@@ -393,19 +434,19 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
       const mapId = action.map?.id || action.map_id;
       const mapName = mapId && mapsById.has(mapId) 
         ? mapsById.get(mapId)! 
-        : 'неизвестная карта';
+        : t('vetoSession.unknownMap');
 
       if (action.action_type === 'ban') {
-        log(`${teamName} банит карту ${mapName}.`);
+        log(t('vetoSession.banAction', { teamName, mapName }));
       } else if (action.action_type === 'pick') {
-        log(`${teamName} выбирает карту ${mapName}.`);
+        log(t('vetoSession.pickAction', { teamName, mapName }));
       }
     });
 
     if (session.value.status === 'finished' && session.value.selected_map_id) {
       const selectedMap = session.value.map_pool?.maps.find(m => m.id === session.value!.selected_map_id);
       if (selectedMap) {
-        log(`Автопик: последняя оставшаяся карта ${selectedMap.name} выбирается для игры.`);
+        log(t('vetoSession.autoPick', { mapName: selectedMap.name }));
       }
     }
   }
@@ -453,6 +494,7 @@ export function useVetoSession(options?: UseVetoSessionOptions) {
     updateSessionFromWebSocket,
     banMap,
     pickMap,
+    selectSide,
     resetSession,
     getNextAction,
     log,

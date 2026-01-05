@@ -42,6 +42,7 @@ export interface Room {
   status: 'waiting' | 'active' | 'finished';
   gameId: number;
   mapPoolId?: number;
+  vetoType?: 'bo1' | 'bo3' | 'bo5'; // Тип вето
   vetoSessionId?: number;
   maxParticipants: number;
   password?: string; // Пароль для приватных комнат (опционально)

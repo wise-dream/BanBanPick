@@ -1,6 +1,9 @@
 package veto
 
 import (
+	"math/rand"
+	"time"
+
 	"github.com/bbp/backend/internal/domain/entities"
 )
 
@@ -85,24 +88,32 @@ func (s *VetoLogicService) IsVetoFinished(
 		return len(availableMaps) == 1
 
 	case entities.VetoTypeBo3:
-		// Bo3: нужно 2 pick (Map 1 и Map 2), последняя автоматически
+		// Bo3: нужно 2 pick (Map 1 и Map 2), десидер выбирается из оставшихся карт
+		// НЕ проверяем len(availableMaps) == 1, потому что может остаться больше карт
+		// Десидер выбирается автоматически после выбора сторон для обоих пиков
 		pickCount := 0
 		for _, action := range actions {
 			if action.ActionType == entities.VetoActionTypePick {
 				pickCount++
 			}
 		}
-		return pickCount == 2 && len(availableMaps) == 1
+		// Сессия завершена когда есть 2 пика (десидер будет выбран автоматически)
+		// Проверка выбора сторон для пиков должна быть в select_side, а не здесь
+		return pickCount == 2
 
 	case entities.VetoTypeBo5:
-		// Bo5: нужно 4 pick (Map 1-4), последняя автоматически
+		// Bo5: нужно 4 pick (Map 1-4), десидер выбирается из оставшихся карт
+		// НЕ проверяем len(availableMaps) == 1, потому что может остаться больше карт
+		// Десидер выбирается автоматически после выбора сторон для всех пиков
 		pickCount := 0
 		for _, action := range actions {
 			if action.ActionType == entities.VetoActionTypePick {
 				pickCount++
 			}
 		}
-		return pickCount == 4 && len(availableMaps) == 1
+		// Сессия завершена когда есть 4 пика (десидер будет выбран автоматически)
+		// Проверка выбора сторон для пиков должна быть в select_side, а не здесь
+		return pickCount == 4
 
 	default:
 		return false
@@ -190,4 +201,79 @@ func (s *VetoLogicService) GetPickedMaps(actions []entities.VetoAction) []uint {
 		}
 	}
 	return pickedMapIDs
+}
+
+// GetSideSelectionTeam определяет какая команда должна выбирать сторону после пика на указанном шаге
+// Логика:
+// - BO3: после пика на шаге 3 (команда A пикает) → команда B выбирает сторону
+//        после пика на шаге 6 (команда B пикает) → команда A выбирает сторону
+// - BO5: после каждого пика противоположная команда выбирает сторону
+func (s *VetoLogicService) GetSideSelectionTeam(sessionType entities.VetoType, pickStep int) string {
+	switch sessionType {
+	case entities.VetoTypeBo3:
+		if pickStep == 3 {
+			// После пика A на шаге 3, B выбирает сторону
+			return "B"
+		} else if pickStep == 6 {
+			// После пика B на шаге 6, A выбирает сторону
+			return "A"
+		}
+	case entities.VetoTypeBo5:
+		// После каждого пика противоположная команда выбирает сторону
+		// Пик на шаге 5 (A) → B выбирает
+		// Пик на шаге 6 (B) → A выбирает
+		// Пик на шаге 9 (A) → B выбирает
+		// Пик на шаге 12 (B) → A выбирает
+		pickTeam := s.GetCurrentTeam(sessionType, pickStep)
+		if pickTeam == "A" {
+			return "B"
+		}
+		return "A"
+	}
+	return ""
+}
+
+// NeedsSideSelection проверяет нужен ли выбор стороны после последнего действия
+func (s *VetoLogicService) NeedsSideSelection(session *entities.VetoSession, actions []entities.VetoAction) bool {
+	if len(actions) == 0 {
+		return false
+	}
+
+	lastAction := actions[len(actions)-1]
+	
+	// Выбор стороны нужен только после пика
+	if lastAction.ActionType != entities.VetoActionTypePick {
+		return false
+	}
+
+	// Если сторона уже выбрана, больше не нужна
+	if lastAction.SelectedSide != nil {
+		return false
+	}
+
+	// Проверяем, есть ли команда которая должна выбирать сторону
+	shouldSelectTeam := s.GetSideSelectionTeam(session.Type, lastAction.StepNumber)
+	return shouldSelectTeam != ""
+}
+
+// RandomizeDeciderSide рандомит сторону (attack или defence) для десидера
+// Используется для третьей карты в BO3 или пятой карты в BO5
+// Возвращает строку "attack" или "defence"
+func (s *VetoLogicService) RandomizeDeciderSide() string {
+	rand.Seed(time.Now().UnixNano())
+	if rand.Intn(2) == 0 {
+		return "attack"
+	}
+	return "defence"
+}
+
+// RandomizeDeciderTeam рандомит команду, которая получает выбранную сторону для десидера
+// Используется вместе с RandomizeDeciderSide для полного рандома сторон десидера
+// Возвращает "A" или "B"
+func (s *VetoLogicService) RandomizeDeciderTeam() string {
+	rand.Seed(time.Now().UnixNano())
+	if rand.Intn(2) == 0 {
+		return "A"
+	}
+	return "B"
 }

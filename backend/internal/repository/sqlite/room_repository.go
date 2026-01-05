@@ -17,6 +17,12 @@ func NewRoomRepository(db *gorm.DB) repositories.RoomRepository {
 }
 
 func (r *roomRepository) Create(room *entities.Room) error {
+	var vetoTypeStr *string
+	if room.VetoType != nil {
+		s := string(*room.VetoType)
+		vetoTypeStr = &s
+	}
+	
 	model := &models.RoomModel{
 		OwnerID:         room.OwnerID,
 		Name:            room.Name,
@@ -26,6 +32,7 @@ func (r *roomRepository) Create(room *entities.Room) error {
 		Status:          string(room.Status),
 		GameID:          room.GameID,
 		MapPoolID:       room.MapPoolID,
+		VetoType:        vetoTypeStr,
 		VetoSessionID:   room.VetoSessionID,
 		MaxParticipants: room.MaxParticipants,
 	}
@@ -143,6 +150,12 @@ func (r *roomRepository) GetRooms(filter *repositories.RoomFilter, limit, offset
 }
 
 func (r *roomRepository) Update(room *entities.Room) error {
+	var vetoTypeStr *string
+	if room.VetoType != nil {
+		s := string(*room.VetoType)
+		vetoTypeStr = &s
+	}
+	
 	model := &models.RoomModel{
 		ID:              room.ID,
 		OwnerID:         room.OwnerID,
@@ -152,6 +165,7 @@ func (r *roomRepository) Update(room *entities.Room) error {
 		Status:          string(room.Status),
 		GameID:         room.GameID,
 		MapPoolID:      room.MapPoolID,
+		VetoType:       vetoTypeStr,
 		VetoSessionID:  room.VetoSessionID,
 		MaxParticipants: room.MaxParticipants,
 	}
@@ -275,6 +289,12 @@ func (r *roomRepository) Count(filter *repositories.RoomFilter) (int64, error) {
 }
 
 func toRoomEntity(model *models.RoomModel) *entities.Room {
+	var vetoType *entities.VetoType
+	if model.VetoType != nil {
+		vt := entities.VetoType(*model.VetoType)
+		vetoType = &vt
+	}
+	
 	return &entities.Room{
 		ID:              model.ID,
 		OwnerID:         model.OwnerID,
@@ -285,6 +305,7 @@ func toRoomEntity(model *models.RoomModel) *entities.Room {
 		Status:          entities.RoomStatus(model.Status),
 		GameID:          model.GameID,
 		MapPoolID:       model.MapPoolID,
+		VetoType:        vetoType,
 		VetoSessionID:   model.VetoSessionID,
 		MaxParticipants: model.MaxParticipants,
 		CreatedAt:       model.CreatedAt,

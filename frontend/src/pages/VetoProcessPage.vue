@@ -5,6 +5,7 @@ import { useVetoSession } from '../composables/useVetoSession'
 import { getPoolById } from '../services/mapPoolService'
 import { getRoom, getRoomBySessionId, roomResponseToRoom } from '../services/api/roomService'
 import { useAuthStore } from '../store/auth'
+import { useI18n } from '../composables/useI18n'
 import type { MapPool, Room } from '../types'
 import type { MapName } from '../types/veto'
 import VetoHeader from '../components/VetoHeader.vue'
@@ -15,6 +16,8 @@ import SideOverlay from '../components/SideOverlay.vue'
 import * as vetoService from '../services/api/vetoService'
 import { useRoomWebSocket } from '../composables/useRoomWebSocket'
 import { useErrorToast } from '../composables/useErrorToast'
+
+const { t } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -42,6 +45,7 @@ const error = ref<string | null>(null)
 const teamAName = ref('Team A')
 const teamBName = ref('Team B')
 const vetoType = ref<'bo1' | 'bo3' | 'bo5'>('bo1')
+const nextAction = ref<import('../services/api/types').NextActionResponse | null>(null)
 
 // Ключ для принудительного перерендера при сбросе
 const mapsGridKey = ref(0)
@@ -88,8 +92,10 @@ function initializeMapsState() {
   
   if (allMaps.value.length > 0) {
     const sessionBans = new Set(vetoSession.state.value.bans || [])
-    // Показываем выбранную карту только если процесс начат И завершен
-    const sessionPicked = (vetoSession.state.value.started && vetoSession.state.value.finished) 
+    const sessionPicked = new Set(vetoSession.state.value.pickedMaps || [])
+    // Показываем пикнутые карты сразу после пика (для BO3/BO5)
+    // Для финальной карты (десидера) также показываем если процесс завершен
+    const selectedMap = (vetoSession.state.value.started && vetoSession.state.value.finished) 
       ? vetoSession.state.value.selectedMap 
       : null
     
@@ -97,7 +103,8 @@ function initializeMapsState() {
       const mapName = map as MapName
       newState[mapName] = {
         isBanned: sessionBans.has(mapName),
-        isPicked: mapName === sessionPicked
+        // Пикнутые карты показываем сразу (для BO3/BO5), не только после завершения
+        isPicked: sessionPicked.has(mapName) || (selectedMap !== null && mapName === selectedMap)
       }
     })
   }
@@ -129,10 +136,11 @@ function isMapBanned(mapName: MapName): boolean {
   return state.isBanned
 }
 
-// Проверка, выбрана ли карта (только если процесс начат и завершен)
+// Проверка, выбрана ли карта
 function isMapPicked(mapName: MapName): boolean {
-  // Не показываем выбранную карту до начала процесса или до завершения
-  if (!vetoSession.state.value.started || !vetoSession.state.value.finished) {
+  // Показываем пикнутые карты сразу после пика (для BO3/BO5)
+  // Не требуем finished - карты могут быть пикнуты в процессе
+  if (!vetoSession.state.value.started) {
     return false
   }
   
@@ -140,6 +148,215 @@ function isMapPicked(mapName: MapName): boolean {
   if (!state) return false
   return state.isPicked
 }
+
+// Интерфейс для данных о карте в финальном popup
+interface FinalMapData {
+  order: number // Порядок карты (1, 2, 3...)
+  mapName: MapName
+  attackTeam: 'A' | 'B' | null // Команда на ATTACK
+  defenceTeam: 'A' | 'B' | null // Команда на DEFENCE
+}
+
+// Построение данных о пикнутых картах из actions для отображения в финальном popup
+// Проверка, что все пикнутые карты имеют выбранные стороны
+function areAllSidesSelected(): boolean {
+  if (!vetoSession.session.value) {
+    console.log('⚠️ [areAllSidesSelected] No session')
+    return false
+  }
+  
+  const session = vetoSession.session.value
+  const sessionType = session.type?.toLowerCase() as 'bo1' | 'bo3' | 'bo5' | undefined
+  
+  // Для BO1: не требуется выбор сторон (нет пиков), popup показывается сразу после завершения
+  if (sessionType === 'bo1') {
+    console.log('✅ [areAllSidesSelected] BO1 - sides selection not required')
+    return true
+  }
+  
+  if (!session.actions) {
+    console.log('⚠️ [areAllSidesSelected] No actions in session')
+    return false
+  }
+  
+  const pickActions = session.actions.filter(
+    action => action.action_type === 'pick'
+  )
+  
+  // Для BO3/BO5: проверяем что все пики имеют selected_side
+  const allPicksHaveSides = pickActions.every(action => action.selected_side !== undefined && action.selected_side !== null)
+  
+  // Для BO3/BO5: также проверяем что десидер (third/fifth map) имеет выбранную сторону
+  // Десидер имеет selected_side в session.selected_side, а не в action
+  const deciderHasSide = !session.selected_map_id || !!session.selected_side
+  
+  const allHaveSides = allPicksHaveSides && deciderHasSide
+  
+  console.log('🔍 [areAllSidesSelected] Check result:', {
+    sessionType,
+    pickActionsCount: pickActions.length,
+    allPicksHaveSides,
+    hasSelectedMap: !!session.selected_map_id,
+    deciderHasSide,
+    selectedSide: session.selected_side,
+    allHaveSides,
+    pickActions: pickActions.map(a => ({
+      step: a.step_number,
+      team: a.team,
+      mapId: a.map_id,
+      hasSelectedSide: a.selected_side !== undefined && a.selected_side !== null,
+      selectedSide: a.selected_side
+    }))
+  })
+  
+  return allHaveSides
+}
+
+function buildFinalMapsData(): FinalMapData[] {
+  if (!vetoSession.session.value?.actions || !vetoSession.session.value?.map_pool?.maps) {
+    return []
+  }
+  
+  const actions = vetoSession.session.value.actions
+  const session = vetoSession.session.value
+  const mapsById = new Map<number, MapName>()
+  
+  // Создаем мапу map_id -> mapName
+  vetoSession.session.value.map_pool.maps.forEach(map => {
+    mapsById.set(map.id, map.name as MapName)
+  })
+  
+  // Находим все pick действия и сортируем по step_number
+  const pickActions = actions
+    .filter(action => action.action_type === 'pick')
+    .sort((a, b) => a.step_number - b.step_number)
+  
+  const result: FinalMapData[] = []
+  let mapOrder = 1
+  
+  pickActions.forEach(pickAction => {
+    const mapId = pickAction.map_id
+    const mapName = mapsById.get(mapId)
+    
+    if (!mapName) return
+    
+    // Определяем стороны на основе selected_side
+    // selected_side показывает сторону, которую выбрала команда после пика
+    // Команда, которая выбирает сторону - это НЕ команда, которая пикала, а противоположная
+    let attackTeam: 'A' | 'B' | null = null
+    let defenceTeam: 'A' | 'B' | null = null
+    
+    if (pickAction.selected_side) {
+      // Команда, которая пикала
+      const pickingTeam = pickAction.team as 'A' | 'B'
+      // Команда, которая выбирала сторону (противоположная от пикавшей)
+      const sideSelectingTeam = pickingTeam === 'A' ? 'B' : 'A'
+      
+      if (pickAction.selected_side === 'attack') {
+        // Команда, которая выбирала сторону, выбрала ATTACK
+        attackTeam = sideSelectingTeam
+        defenceTeam = pickingTeam
+      } else if (pickAction.selected_side === 'defence') {
+        // Команда, которая выбирала сторону, выбрала DEFENCE
+        defenceTeam = sideSelectingTeam
+        attackTeam = pickingTeam
+      }
+    }
+    
+    result.push({
+      order: mapOrder++,
+      mapName,
+      attackTeam,
+      defenceTeam
+    })
+  })
+  
+  // Для BO3: добавляем третью карту из selected_map_id (если есть)
+  // BO3 требует 2 пика, третья карта выбирается автоматически из оставшейся
+  // Сторона для десидера рандомится автоматически на бэкенде
+  if (session.type === 'bo3' && session.selected_map_id && pickActions.length === 2) {
+    const thirdMapName = mapsById.get(session.selected_map_id)
+    // Проверяем, что эта карта не была уже пикнута
+    const isAlreadyPicked = pickActions.some(action => action.map_id === session.selected_map_id)
+    if (thirdMapName && !isAlreadyPicked) {
+      // Определяем стороны для десидера на основе session.selected_side
+      // selected_side для десидера показывает случайную сторону (attack или defence)
+      // Команда, которая получает эту сторону, тоже рандомится на бэкенде
+      // Бэкенд может хранить это в session.selected_side как "attack:A" или "defence:B"
+      // Но для простоты пока используем session.selected_side как сторону,
+      // а команду рандомим на фронтенде (можно улучшить, передав команду с бэкенда)
+      let attackTeam: 'A' | 'B' | null = null
+      let defenceTeam: 'A' | 'B' | null = null
+      
+      if (session.selected_side) {
+        // Рандомим команду для выбранной стороны на основе hash от map_id для стабильности
+        // Это обеспечивает одинаковый рандом для всех пользователей
+        const mapIdHash = session.selected_map_id ? session.selected_map_id % 2 : 0
+        const teamForSide = mapIdHash === 0 ? 'A' : 'B'
+        
+        if (session.selected_side === 'attack') {
+          attackTeam = teamForSide
+          defenceTeam = teamForSide === 'A' ? 'B' : 'A'
+        } else if (session.selected_side === 'defence') {
+          defenceTeam = teamForSide
+          attackTeam = teamForSide === 'A' ? 'B' : 'A'
+        }
+      }
+      
+      result.push({
+        order: 3,
+        mapName: thirdMapName,
+        attackTeam,
+        defenceTeam
+      })
+    }
+  }
+  
+  // Для BO5: добавляем пятую карту из selected_map_id (если есть)
+  // BO5 требует 4 пика, пятая карта выбирается автоматически из оставшейся
+  // Сторона для десидера рандомится автоматически на бэкенде
+  if (session.type === 'bo5' && session.selected_map_id && pickActions.length === 4) {
+    const fifthMapName = mapsById.get(session.selected_map_id)
+    // Проверяем, что эта карта не была уже пикнута
+    const isAlreadyPicked = pickActions.some(action => action.map_id === session.selected_map_id)
+    if (fifthMapName && !isAlreadyPicked) {
+      // Определяем стороны для десидера аналогично BO3
+      let attackTeam: 'A' | 'B' | null = null
+      let defenceTeam: 'A' | 'B' | null = null
+      
+      if (session.selected_side) {
+        if (session.selected_side === 'attack') {
+          attackTeam = 'A'
+          defenceTeam = 'B'
+        } else if (session.selected_side === 'defence') {
+          attackTeam = 'B'
+          defenceTeam = 'A'
+        }
+      }
+      
+      result.push({
+        order: 5,
+        mapName: fifthMapName,
+        attackTeam,
+        defenceTeam
+      })
+    }
+  }
+  
+  return result
+}
+
+// Computed для данных о финальных картах
+const finalMapsData = computed(() => {
+  if (!vetoSession.state.value.finished || !vetoSession.state.value.started) {
+    return []
+  }
+  // Проверяем, что все стороны выбраны перед построением данных
+  if (!areAllSidesSelected()) {
+    return []
+  }
+  return buildFinalMapsData()
+})
 
 const userTeam = computed<'A' | 'B' | null>(() => {
   const isAuthenticated = authStore.isAuthenticated
@@ -281,6 +498,89 @@ const canBan = computed(() => {
   return result
 })
 
+// Определяем, может ли пользователь пикать карту
+const canPick = computed(() => {
+  const started = vetoSession.state.value.started
+  const finished = vetoSession.state.value.finished
+  const userTeamValue = userTeam.value
+  const nextActionValue = nextAction.value
+  
+  if (!started || finished) {
+    return false
+  }
+  
+  if (userTeamValue === null) {
+    return false
+  }
+  
+  if (!nextActionValue?.can_pick) {
+    return false
+  }
+  
+  // Проверяем, что очередь текущего пользователя
+  return nextActionValue.current_team === userTeamValue
+})
+
+// Проверяем, нужен ли выбор стороны
+const needsSideSelection = computed(() => {
+  return nextAction.value?.needs_side_selection === true
+})
+
+// Определяем, какая команда должна выбрать сторону
+const sideSelectionTeam = computed(() => {
+  return nextAction.value?.side_selection_team || ''
+})
+
+// Проверяем, должен ли текущий пользователь выбрать сторону
+const shouldShowSideSelection = computed(() => {
+  return needsSideSelection.value && 
+         sideSelectionTeam.value === userTeam.value &&
+         !vetoSession.state.value.finished
+})
+
+// Определяем тип действия (ban, pick или null)
+const actionType = computed<'ban' | 'pick' | null>(() => {
+  if (!nextAction.value || !vetoSession.state.value.started || vetoSession.state.value.finished) {
+    return null
+  }
+  
+  if (nextAction.value.needs_side_selection) {
+    return null // Блокируем действия, если нужен выбор стороны
+  }
+  
+  if (nextAction.value.can_pick && nextAction.value.current_team === userTeam.value) {
+    return 'pick'
+  }
+  
+  if (nextAction.value.can_ban && nextAction.value.current_team === userTeam.value) {
+    return 'ban'
+  }
+  
+  return null
+})
+
+// Функция для загрузки следующего действия
+async function loadNextAction() {
+  if (!vetoSession.sessionId.value) {
+    return
+  }
+  
+  try {
+    const action = await vetoSession.getNextAction()
+    nextAction.value = action
+    console.log('📋 [loadNextAction] Next action loaded:', {
+      action_type: action?.action_type,
+      current_team: action?.current_team,
+      can_ban: action?.can_ban,
+      can_pick: action?.can_pick,
+      needs_side_selection: action?.needs_side_selection,
+      side_selection_team: action?.side_selection_team
+    })
+  } catch (err: any) {
+    console.error('❌ [loadNextAction] Error loading next action:', err)
+  }
+}
+
 // Функция для обновления названий команд из сессии с fallback на никнеймы из комнаты
 function updateTeamNamesFromSession() {
   if (!vetoSession.session.value) return
@@ -329,6 +629,29 @@ watch(
         if (optimisticBannedMap.value === map && isBanned) {
           optimisticBannedMap.value = null
         }
+      }
+    })
+  },
+  { deep: true }
+)
+
+// Следим за изменениями выбранных карт (pickedMaps)
+watch(
+  () => vetoSession.state.value.pickedMaps,
+  (newPicked, oldPicked) => {
+    if (!allMaps.value.length) return
+    
+    const newPickedSet = new Set(newPicked || [])
+    const oldPickedSet = new Set(oldPicked || [])
+    
+    // Находим только измененные карты
+    allMaps.value.forEach(map => {
+      const wasPicked = oldPickedSet.has(map)
+      const isPicked = newPickedSet.has(map)
+      
+      if (wasPicked !== isPicked) {
+        // Обновляем только эту карту
+        updateMapState(map, { isPicked })
       }
     })
   },
@@ -491,7 +814,7 @@ onMounted(async () => {
     await loadPool()
   } else {
     console.error('❌ [VetoProcessPage] No poolId or session token provided')
-    error.value = 'Не указан пул карт или токен сессии'
+    error.value = t('errors.poolOrTokenNotProvided')
     loading.value = false
   }
   
@@ -540,7 +863,7 @@ const loadPool = async () => {
     currentPool.value = pool
     initializeMapsState()
   } catch (err: any) {
-    error.value = err.message || 'Не удалось загрузить пул карт'
+    error.value = err.message || t('errors.poolLoadError')
   } finally {
     loading.value = false
   }
@@ -723,14 +1046,19 @@ const loadSessionById = async (id: number) => {
           currentPool.value = pool
           initializeMapsState()
         } else {
-          error.value = 'Пул карт не найден или не содержит карт'
+          error.value = t('errors.poolNotFoundOrEmpty')
         }
       } else {
         error.value = 'Пул карт не указан в сессии'
       }
+      
+      // Загружаем следующее действие после загрузки сессии
+      if (vetoSession.sessionId.value && vetoSession.state.value.started && !vetoSession.state.value.finished) {
+        await loadNextAction()
+      }
     }
   } catch (err: any) {
-    error.value = err.message || 'Не удалось загрузить сессию'
+    error.value = err.message || t('errors.sessionLoadError')
   } finally {
     loading.value = false
   }
@@ -783,10 +1111,15 @@ const loadSessionByToken = async (token: string) => {
           currentPool.value = pool
           initializeMapsState()
         } else {
-          error.value = 'Пул карт не найден или не содержит карт'
+          error.value = t('errors.poolNotFoundOrEmpty')
         }
       } else {
         error.value = 'Пул карт не указан в сессии'
+      }
+      
+      // Загружаем следующее действие после загрузки сессии
+      if (vetoSession.sessionId.value && vetoSession.state.value.started && !vetoSession.state.value.finished) {
+        await loadNextAction()
       }
     }
   } catch (err: any) {
@@ -801,7 +1134,7 @@ const loadSessionByToken = async (token: string) => {
 // Обрабатываем WebSocket сообщения для real-time обновлений
 watch(
   () => roomWs.value?.messages.value,
-  (messages) => {
+  async (messages) => {
     const currentRoomIdInWatch = actualRoomId.value
     console.log('👀 [WebSocket Watch] Messages changed:', {
       messagesCount: messages?.length || 0,
@@ -853,7 +1186,9 @@ watch(
         roomIdFromQuery,
         sessionId: vetoSession.sessionId.value
       })
-      handleWebSocketMessage(message)
+      handleWebSocketMessage(message).catch(err => {
+        console.error(`❌ [WebSocket Watch] Error processing message ${i + 1}:`, err)
+      })
     }
     
     lastProcessedMessageIndex.value = messages.length - 1
@@ -882,7 +1217,7 @@ watch(roomWs, (newWs, oldWs) => {
 })
 
 // Обработка WebSocket сообщений
-function handleWebSocketMessage(message: any) {
+async function handleWebSocketMessage(message: any) {
   const messageTimestamp = new Date().toISOString()
   const currentRoomIdInMessage = actualRoomId.value
   
@@ -987,7 +1322,12 @@ function handleWebSocketMessage(message: any) {
               }
             }
             
-            if (vetoSession.state.value.finished && pickedMap.value) {
+            // Загружаем следующее действие после обновления сессии
+            if (vetoSession.sessionId.value && vetoSession.state.value.started && !vetoSession.state.value.finished) {
+              loadNextAction().catch(err => console.error('Error loading next action:', err))
+            }
+            
+            if (vetoSession.state.value.finished && pickedMap.value && areAllSidesSelected()) {
               console.log('🏁 [VETO:BAN] Session finished, showing final overlay')
               showFinalOverlay.value = true
             }
@@ -1074,28 +1414,63 @@ function handleWebSocketMessage(message: any) {
                 const isPick = message.data.action.action_type === 'pick'
                 
                 if (isPick) {
-                  // Помечаем карту как выбранную только если процесс завершен
-                  if (vetoSession.state.value.finished) {
-                    console.log('✅ [VETO:PICK] Updating map state to picked:', {
-                      mapName,
-                      previousState: mapsState.value[mapName],
-                      finished: vetoSession.state.value.finished
-                    })
-                    
+                  console.log('✅ [VETO:PICK] Updating map state to picked:', {
+                    mapName,
+                    previousState: mapsState.value[mapName],
+                    finished: vetoSession.state.value.finished,
+                    pickedMaps: vetoSession.state.value.pickedMaps
+                  })
+                  
+                  // Обновляем состояние карты как выбранной
+                  // Watch на pickedMaps обновит это автоматически, но делаем сразу для оптимистичного обновления
+                  if (vetoSession.state.value.pickedMaps.includes(mapName)) {
                     updateMapState(mapName, { isPicked: true })
-                  } else {
-                    console.log('⏳ [VETO:PICK] Process not finished yet, skipping pick update:', {
-                      mapName,
-                      finished: vetoSession.state.value.finished
-                    })
                   }
                 }
               }
             }
             
-            if (vetoSession.state.value.finished && pickedMap.value) {
-              console.log('🏁 [VETO:PICK] Session finished, showing final overlay')
-              showFinalOverlay.value = true
+            // ВАЖНО: Сначала загружаем следующее действие, чтобы проверить нужен ли выбор стороны
+            // Это должно произойти ДО проверки завершения сессии
+            if (vetoSession.sessionId.value && vetoSession.state.value.started) {
+              await loadNextAction().catch(err => console.error('Error loading next action:', err))
+              
+              // Проверяем, нужен ли выбор стороны ПЕРЕД проверкой завершения
+              if (nextAction.value?.needs_side_selection) {
+                console.log('🎯 [VETO:PICK] Side selection needed after pick:', {
+                  sideSelectionTeam: nextAction.value.side_selection_team,
+                  userTeam: userTeam.value
+                })
+                // UI выбора стороны будет показан через shouldShowSideSelection computed
+                // Не проверяем finished здесь, так как выбор стороны еще нужен
+              } else {
+                // Выбор стороны не нужен, проверяем завершение сессии
+                if (vetoSession.state.value.finished) {
+                  nextTick(() => {
+                    const allSidesSelected = areAllSidesSelected()
+                    const hasPickedMap = !!pickedMap.value
+                    console.log('🏁 [VETO:PICK] Checking final overlay conditions:', {
+                      finished: vetoSession.state.value.finished,
+                      hasPickedMap,
+                      pickedMap: pickedMap.value,
+                      allSidesSelected,
+                      pickActionsCount: vetoSession.session.value?.actions?.filter(a => a.action_type === 'pick').length || 0,
+                      actionsWithSides: vetoSession.session.value?.actions?.filter(a => a.action_type === 'pick' && a.selected_side)?.length || 0
+                    })
+                    
+                    if (hasPickedMap && allSidesSelected) {
+                      console.log('🏁 [VETO:PICK] Session finished, showing final overlay')
+                      showFinalOverlay.value = true
+                    } else {
+                      console.warn('⚠️ [VETO:PICK] Cannot show final overlay:', {
+                        hasPickedMap,
+                        allSidesSelected,
+                        pickedMap: pickedMap.value
+                      })
+                    }
+                  })
+                }
+              }
             }
             
             const stateAfter = {
@@ -1168,6 +1543,9 @@ function handleWebSocketMessage(message: any) {
           if (success) {
             updateTeamNamesFromSession()
             initializeMapsState()
+            
+            // Watch на сессию автоматически загрузит nextAction после старта
+            // Не вызываем здесь, чтобы избежать дублирования
             
             const stateAfter = {
               started: vetoSession.state.value.started,
@@ -1338,6 +1716,11 @@ function handleWebSocketMessage(message: any) {
             updateTeamNamesFromSession()
             initializeMapsState()
             
+            // Загружаем следующее действие после обновления сессии из room:state
+            if (vetoSession.sessionId.value && vetoSession.state.value.started && !vetoSession.state.value.finished) {
+              loadNextAction().catch(err => console.error('Error loading next action:', err))
+            }
+            
             const stateAfter = {
               started: vetoSession.state.value.started,
               finished: vetoSession.state.value.finished,
@@ -1364,6 +1747,69 @@ function handleWebSocketMessage(message: any) {
         }
       } else {
         console.log('ℹ️ [ROOM:STATE] No veto session in room state')
+      }
+      break
+    case 'veto:side':
+      console.log('🎯 [VETO:SIDE] Processing side selection message:', {
+        hasSession: !!message.data?.session,
+        sessionId: message.data?.session?.id,
+        timestamp: messageTimestamp
+      })
+      
+      if (message.data?.session) {
+        const sessionData = message.data.session
+        
+        if (sessionData.map_pool && sessionData.actions !== undefined) {
+          console.log('📋 [VETO:SIDE] Session data valid:', {
+            sessionId: sessionData.id,
+            status: sessionData.status,
+            actionsCount: sessionData.actions?.length || 0,
+            mapsCount: sessionData.map_pool?.maps?.length || 0
+          })
+          
+          const success = vetoSession.updateSessionFromWebSocket(sessionData)
+          
+          console.log('📊 [VETO:SIDE] updateSessionFromWebSocket result:', {
+            success,
+            newStatus: vetoSession.state.value.started,
+            newCurrentTeam: vetoSession.state.value.currentTeam,
+            finished: vetoSession.state.value.finished
+          })
+          
+          if (success) {
+            updateTeamNamesFromSession()
+            
+            // ВАЖНО: Загружаем следующее действие после обновления сессии
+            // Это важно для обновления nextAction и проверки завершения сессии
+            if (vetoSession.sessionId.value && vetoSession.state.value.started) {
+              console.log('🔄 [VETO:SIDE] Loading next action after side selection...')
+              await loadNextAction().catch(err => console.error('❌ [VETO:SIDE] Error loading next action:', err))
+              
+              // После выбора стороны проверяем, завершена ли сессия
+              // Используем nextTick чтобы дождаться обновления всех реактивных данных
+              await nextTick()
+              
+              if (vetoSession.state.value.finished && pickedMap.value && areAllSidesSelected()) {
+                console.log('🏁 [VETO:SIDE] All sides selected, session finished, showing final overlay')
+                showFinalOverlay.value = true
+              } else {
+                console.log('ℹ️ [VETO:SIDE] Session not finished yet or sides not all selected:', {
+                  finished: vetoSession.state.value.finished,
+                  hasPickedMap: !!pickedMap.value,
+                  allSidesSelected: areAllSidesSelected(),
+                  pickActionsCount: vetoSession.session.value?.actions?.filter(a => a.action_type === 'pick').length || 0,
+                  actionsWithSides: vetoSession.session.value?.actions?.filter(a => a.action_type === 'pick' && a.selected_side)?.length || 0
+                })
+              }
+            }
+          } else {
+            console.error('❌ [VETO:SIDE] updateSessionFromWebSocket failed')
+          }
+        } else {
+          console.warn('⚠️ [VETO:SIDE] WebSocket message missing map_pool or actions')
+        }
+      } else {
+        console.warn('⚠️ [VETO:SIDE] WebSocket message missing session data')
       }
       break
     case 'error':
@@ -1399,6 +1845,42 @@ function handleWebSocketMessage(message: any) {
   }
 }
 
+// Watch на сессию для загрузки nextAction
+watch(
+  () => vetoSession.sessionId.value && vetoSession.state.value.started && !vetoSession.state.value.finished,
+  async (shouldLoad) => {
+    if (shouldLoad && vetoSession.sessionId.value) {
+      await loadNextAction()
+    }
+  },
+  { immediate: true }
+)
+
+// Watch на изменения действий для обновления nextAction
+watch(
+  () => vetoSession.session.value?.actions?.length || 0,
+  async () => {
+    if (vetoSession.sessionId.value && vetoSession.state.value.started && !vetoSession.state.value.finished) {
+      await loadNextAction()
+    }
+  }
+)
+
+// Watch на needsSideSelection для показа UI выбора стороны
+watch(
+  () => shouldShowSideSelection.value,
+  (shouldShow) => {
+    if (shouldShow) {
+      showSideOverlay.value = false // Показываем inline UI, а не overlay
+      console.log('🎯 [SIDE_SELECTION] Side selection UI should be shown:', {
+        needsSideSelection: needsSideSelection.value,
+        sideSelectionTeam: sideSelectionTeam.value,
+        userTeam: userTeam.value
+      })
+    }
+  }
+)
+
 watch(() => vetoSession.logEntries.value.length, async () => {
   await nextTick()
   const logElement = document.querySelector('.log')
@@ -1407,11 +1889,57 @@ watch(() => vetoSession.logEntries.value.length, async () => {
   }
 })
 
-watch(() => vetoSession.state.value.finished, finished => {
-  if (finished && pickedMap.value) {
-    showFinalOverlay.value = true
+watch(() => vetoSession.state.value.finished, (finished) => {
+  if (finished) {
+    nextTick(() => {
+      const allSidesSelected = areAllSidesSelected()
+      const hasPickedMap = !!pickedMap.value
+      console.log('🏁 [Watch finished] Checking final overlay conditions:', {
+        finished,
+        hasPickedMap,
+        pickedMap: pickedMap.value,
+        allSidesSelected,
+        pickActionsCount: vetoSession.session.value?.actions?.filter(a => a.action_type === 'pick').length || 0,
+        actionsWithSides: vetoSession.session.value?.actions?.filter(a => a.action_type === 'pick' && a.selected_side)?.length || 0
+      })
+      
+      if (hasPickedMap && allSidesSelected) {
+        console.log('🏁 [Watch finished] Showing final overlay')
+        showFinalOverlay.value = true
+      } else {
+        console.warn('⚠️ [Watch finished] Cannot show final overlay:', {
+          hasPickedMap,
+          allSidesSelected,
+          pickedMap: pickedMap.value
+        })
+      }
+    })
   }
 })
+
+// Watch на сессию для проверки выбора сторон после выбора стороны
+watch(() => vetoSession.session.value?.actions, (actions) => {
+  if (vetoSession.state.value.finished && actions) {
+    nextTick(() => {
+      const allSidesSelected = areAllSidesSelected()
+      const hasPickedMap = !!pickedMap.value
+      console.log('🏁 [Watch actions] Checking final overlay conditions:', {
+        finished: vetoSession.state.value.finished,
+        hasPickedMap,
+        pickedMap: pickedMap.value,
+        allSidesSelected,
+        actionsCount: actions.length,
+        pickActionsCount: actions.filter(a => a.action_type === 'pick').length || 0,
+        actionsWithSides: actions.filter(a => a.action_type === 'pick' && a.selected_side)?.length || 0
+      })
+      
+      if (hasPickedMap && allSidesSelected) {
+        console.log('🏁 [Watch actions] Showing final overlay')
+        showFinalOverlay.value = true
+      }
+    })
+  }
+}, { deep: true })
 
 async function handleStart() {
   const currentRoomId = actualRoomId.value
@@ -1446,6 +1974,11 @@ async function handleStart() {
       })
       
       vetoSession.session.value = updatedSession
+      
+      // Загружаем следующее действие после старта сессии
+      if (vetoSession.sessionId.value && vetoSession.state.value.started && !vetoSession.state.value.finished) {
+        await loadNextAction()
+      }
       
       // Проверяем, подключен ли WebSocket после старта
       const currentRoomIdAfterStart = actualRoomId.value
@@ -1546,7 +2079,7 @@ async function handleStart() {
   }
 
   if (!currentPool.value || !poolId) {
-    error.value = 'Пул карт не загружен'
+    error.value = t('errors.poolNotLoaded')
     return
   }
 
@@ -1599,6 +2132,229 @@ async function handleStart() {
   }
 }
 
+async function handlePick(mapName: MapName) {
+  const currentRoomIdForPick = actualRoomId.value
+  
+  console.log('✅ [PICK] handlePick called:', {
+    mapName,
+    sessionId: vetoSession.sessionId.value,
+    roomIdFromQuery,
+    actualRoomId: currentRoomIdForPick,
+    roomValueId: room.value?.id,
+    hasWebSocket: !!roomWs.value,
+    isConnected: roomWs.value?.isConnected.value,
+    currentTeam: vetoSession.state.value.currentTeam,
+    userTeam: userTeam.value,
+    canPick: canPick.value,
+    started: vetoSession.state.value.started
+  })
+  
+  if (!vetoSession.state.value.started) {
+    showErrorToast({ code: '', message: t('veto.sessionNotStarted') } as any)
+    return
+  }
+
+  if (!canPick.value) {
+    const name =
+      nextAction.value?.current_team === 'A'
+        ? vetoSession.session.value?.team_a_name
+        : vetoSession.session.value?.team_b_name
+    showErrorToast({ code: '', message: `Сейчас очередь команды "${name}". Дождитесь своего хода.` } as any)
+    return
+  }
+
+  if (vetoSession.loading.value) return
+
+  if (!allMaps.value.includes(mapName as any)) {
+    showErrorToast({ code: '', message: t('veto.mapNotAvailable', { mapName }) } as any)
+    return
+  }
+
+  const map = vetoSession.session.value?.map_pool?.maps?.find(m => m.name === mapName) ||
+              currentPool.value?.maps?.find(m => m.name === mapName)
+  
+  if (!map) {
+    showErrorToast({ code: '', message: t('veto.mapNotFound', { mapName }) } as any)
+    return
+  }
+
+  console.log('✅ [PICK] Map found, applying optimistic update:', {
+    mapName,
+    mapId: map.id,
+    currentState: mapsState.value[mapName]
+  })
+
+  // Оптимистичное обновление - обновляем только конкретную карту
+  updateMapState(mapName, { isPicked: true })
+  
+  console.log('📊 [PICK] After optimistic update:', {
+    mapState: mapsState.value[mapName]
+  })
+
+  if (roomWs.value && currentRoomIdForPick && vetoSession.sessionId.value) {
+    try {
+      console.log('📤 [PICK] Sending pick via WebSocket:', {
+        sessionId: vetoSession.sessionId.value,
+        mapId: map.id,
+        mapName,
+        team: vetoSession.state.value.currentTeam,
+        roomId: currentRoomIdForPick,
+        isConnected: roomWs.value.isConnected.value,
+        timestamp: new Date().toISOString()
+      })
+      
+      roomWs.value.sendVetoPick(
+        vetoSession.sessionId.value,
+        map.id,
+        vetoSession.state.value.currentTeam
+      )
+      
+      console.log('✅ [PICK] Pick sent via WebSocket, waiting for response...', {
+        sessionId: vetoSession.sessionId.value,
+        mapId: map.id,
+        mapName
+      })
+    } catch (err: any) {
+      console.error('❌ [PICK] Error sending pick via WebSocket:', {
+        error: err,
+        message: err.message,
+        stack: err.stack,
+        sessionId: vetoSession.sessionId.value,
+        mapId: map.id,
+        mapName,
+        timestamp: new Date().toISOString()
+      })
+      
+      // Откатываем оптимистичное обновление при ошибке
+      updateMapState(mapName, { isPicked: false })
+      
+      console.log('🔄 [PICK] Rolled back optimistic update due to error:', {
+        mapName,
+        newState: mapsState.value[mapName]
+      })
+      
+      showErrorToast({ code: '', message: err.message || t('veto.pickError') } as any)
+    }
+  } else {
+    console.log('📤 [PICK] Using REST API fallback (no WebSocket):', {
+      hasWebSocket: !!roomWs.value,
+      hasRoomId: !!currentRoomIdForPick,
+      actualRoomId: currentRoomIdForPick,
+      roomIdFromQuery,
+      roomValueId: room.value?.id,
+      hasSessionId: !!vetoSession.sessionId.value,
+      reason: !roomWs.value ? 'No WebSocket' : !currentRoomIdForPick ? 'No roomId' : 'Unknown'
+    })
+    
+    // Fallback на REST API
+    const success = await vetoSession.pickMap(mapName as any)
+
+    if (!success) {
+      console.error('❌ [PICK] REST API pick failed')
+      // Откатываем оптимистичное обновление при ошибке
+      updateMapState(mapName, { isPicked: false })
+      
+      if (vetoSession.error.value) {
+        showErrorToast({ code: '', message: vetoSession.error.value } as any)
+      }
+    } else {
+      console.log('✅ [PICK] REST API pick successful')
+      
+      // Загружаем следующее действие после пика
+      await loadNextAction()
+      
+      if (vetoSession.state.value.finished && areAllSidesSelected()) {
+        showFinalOverlay.value = true
+      }
+    }
+  }
+}
+
+async function handleSelectSide(side: 'attack' | 'defence') {
+  console.log('🎯 [SELECT_SIDE] handleSelectSide called:', {
+    side,
+    sessionId: vetoSession.sessionId.value,
+    sideSelectionTeam: sideSelectionTeam.value,
+    userTeam: userTeam.value,
+    needsSideSelection: needsSideSelection.value
+  })
+  
+  if (!needsSideSelection.value) {
+    showErrorToast({ code: '', message: 'Выбор стороны сейчас недоступен' } as any)
+    return
+  }
+  
+  if (sideSelectionTeam.value !== userTeam.value) {
+    const teamName = sideSelectionTeam.value === 'A' 
+      ? vetoSession.session.value?.team_a_name 
+      : vetoSession.session.value?.team_b_name
+    showErrorToast({ code: '', message: t('veto.sideSelectionNotYourTurn', { teamName }) } as any)
+    return
+  }
+  
+  if (!vetoSession.sessionId.value) {
+    showErrorToast({ code: '', message: t('veto.sessionNotLoaded') } as any)
+    return
+  }
+  
+  if (vetoSession.loading.value) return
+  
+  const success = await vetoSession.selectSide(
+    side,
+    sideSelectionTeam.value as 'A' | 'B'
+  )
+  
+  if (success) {
+    console.log('✅ [SELECT_SIDE] Side selected successfully:', {
+      side,
+      sessionId: vetoSession.sessionId.value,
+      updatedSessionActions: vetoSession.session.value?.actions?.length || 0,
+      lastActionSelectedSide: vetoSession.session.value?.actions?.[(vetoSession.session.value?.actions?.length || 0) - 1]?.selected_side
+    })
+    
+    // Перезагружаем сессию, чтобы получить обновленное состояние с выбранной стороной
+    // Это важно, чтобы loadNextAction получил актуальные данные
+    if (vetoSession.sessionId.value) {
+      console.log('🔄 [SELECT_SIDE] Reloading session after side selection...')
+      await vetoSession.loadSession(vetoSession.sessionId.value)
+      
+      const reloadedLastAction = vetoSession.session.value?.actions?.[(vetoSession.session.value?.actions?.length || 0) - 1]
+      console.log('✅ [SELECT_SIDE] Session reloaded:', {
+        actionsCount: vetoSession.session.value?.actions?.length || 0,
+        lastActionSelectedSide: reloadedLastAction?.selected_side
+      })
+    }
+    
+    // Загружаем следующее действие после обновления сессии
+    // Делаем небольшую задержку, чтобы убедиться, что состояние обновлено в БД
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    console.log('🔍 [SELECT_SIDE] Loading next action after side selection...')
+    await loadNextAction()
+    
+    console.log('📋 [SELECT_SIDE] Next action after side selection:', {
+      action_type: nextAction.value?.action_type,
+      needs_side_selection: nextAction.value?.needs_side_selection,
+      can_ban: nextAction.value?.can_ban,
+      can_pick: nextAction.value?.can_pick
+    })
+    
+    // Проверяем, нужно ли показать финальное окно после выбора стороны
+    if (vetoSession.state.value.finished && pickedMap.value && areAllSidesSelected()) {
+      console.log('🏁 [SELECT_SIDE] All sides selected, showing final overlay')
+      showFinalOverlay.value = true
+    }
+    
+    // Скрываем UI выбора стороны
+    showSideOverlay.value = false
+  } else {
+    console.error('❌ [SELECT_SIDE] Side selection failed')
+    if (vetoSession.error.value) {
+      showErrorToast({ code: '', message: vetoSession.error.value } as any)
+    }
+  }
+}
+
 async function handleBan(mapName: MapName) {
   const currentRoomIdForBan = actualRoomId.value
   
@@ -1618,7 +2374,7 @@ async function handleBan(mapName: MapName) {
   })
   
   if (!vetoSession.state.value.started) {
-    showErrorToast({ code: '', message: 'Сессия еще не начата. Нажмите "Начать" для начала вето.' } as any)
+    showErrorToast({ code: '', message: t('veto.sessionNotStarted') } as any)
     return
   }
 
@@ -1642,7 +2398,7 @@ async function handleBan(mapName: MapName) {
               currentPool.value?.maps?.find(m => m.name === mapName)
   
   if (!map) {
-    showErrorToast({ code: '', message: `Карта "${mapName}" не найдена` } as any)
+    showErrorToast({ code: '', message: t('veto.mapNotFound', { mapName }) } as any)
     return
   }
 
@@ -1705,7 +2461,7 @@ async function handleBan(mapName: MapName) {
         newState: mapsState.value[mapName]
       })
       
-      showErrorToast({ code: '', message: err.message || 'Не удалось отправить бан через WebSocket' } as any)
+      showErrorToast({ code: '', message: err.message || t('veto.banError') } as any)
     }
   } else {
     console.log('📤 [BAN] Using REST API fallback (no WebSocket):', {
@@ -1734,7 +2490,10 @@ async function handleBan(mapName: MapName) {
       console.log('✅ [BAN] REST API ban successful')
       optimisticBannedMap.value = null
       
-      if (vetoSession.state.value.finished) {
+      // Загружаем следующее действие после бана
+      await loadNextAction()
+      
+      if (vetoSession.state.value.finished && areAllSidesSelected()) {
         showFinalOverlay.value = true
       }
     }
@@ -1834,7 +2593,7 @@ async function handleReset() {
 
 function handleSide() {
   if (!vetoSession.state.value.finished || !pickedMap.value) {
-    alert('Сначала завершите вето и выберите карту.')
+    alert(t('veto.cannotFinishSide'))
     return
   }
   showSideOverlay.value = true
@@ -1845,13 +2604,13 @@ function handleSide() {
 <template>
   <div class="container" style="position: relative; z-index: 1;">
     <div v-if="loading || vetoSession.loading.value" class="loading-message">
-      {{ shareToken ? 'Загрузка сессии...' : 'Загрузка пула карт...' }}
+      {{ shareToken ? t('veto.loadingSession') : t('veto.loadingPool') }}
     </div>
 
     <div v-else-if="error" class="error-message">
       {{ error }}
       <button @click="router.push('/ban/valorant')" class="btn btn-primary">
-        Вернуться к выбору пула
+        {{ t('veto.backToPoolSelection') }}
       </button>
     </div>
 
@@ -1871,22 +2630,54 @@ function handleSide() {
       <main>
         <section class="panel">
           <div class="panel-header">
-            <div class="panel-title">All maps</div>
+            <div class="panel-title">{{ t('veto.allMaps') }}</div>
             <div class="current-step">
-              Шаг:
+              {{ t('veto.step') }}:
               <span :class="['pill', vetoSession.state.value.finished ? 'done' : 'step']">
                 <template v-if="!vetoSession.state.value.started">
-                  Нажмите «Начать», чтобы начать вето
+                  {{ t('veto.clickToStart') }}
                 </template>
                 <template v-else-if="vetoSession.state.value.finished">
-                  Veto завершён
+                  {{ t('veto.finished') }}
+                </template>
+                <template v-else-if="needsSideSelection">
+                  {{ t('veto.sideSelectionStep') }}: {{ sideSelectionTeam === 'A' ? teamAName : teamBName }}
+                </template>
+                <template v-else-if="actionType === 'pick'">
+                  {{ t('veto.pickTurnStep') }}: {{ currentTeamName }}
                 </template>
                 <template v-else>
-                  Ход бана: {{ currentTeamName }}
+                  {{ t('veto.banTurnStep') }}: {{ currentTeamName }}
                 </template>
               </span>
             </div>
           </div>
+          <!-- UI для выбора стороны (attack/defence) -->
+          <div v-if="shouldShowSideSelection" class="side-choose-box">
+            <div class="side-choose-label">
+              <span class="side-choose-emphasis">{{ vetoType.toUpperCase() }}</span>:
+              <strong>{{ sideSelectionTeam === 'A' ? teamAName : teamBName }}</strong> {{ t('veto.selectsSideOn') }} 
+              <strong v-if="vetoSession.state.value.pickedMaps.length > 0">
+                {{ vetoSession.state.value.pickedMaps[vetoSession.state.value.pickedMaps.length - 1] }}
+              </strong>
+              <strong v-else>{{ t('veto.lastSelectedMap') }}</strong>
+            </div>
+            <div class="side-choose-buttons">
+              <button 
+                class="btn btn-pick" 
+                @click="handleSelectSide('attack')"
+              >
+                {{ t('veto.attack') }}
+              </button>
+              <button 
+                class="btn btn-accent" 
+                @click="handleSelectSide('defence')"
+              >
+                {{ t('veto.defence') }}
+              </button>
+            </div>
+          </div>
+
           <MapsGrid
             :key="mapsGridKey"
             :all-maps="allMaps"
@@ -1894,9 +2685,12 @@ function handleSide() {
             :finished="vetoSession.state.value.finished"
             :started="vetoSession.state.value.started"
             :can-ban="canBan"
+            :can-pick="canPick"
+            :action-type="actionType"
             :is-map-banned="isMapBanned"
             :is-map-picked="isMapPicked"
             @ban="handleBan"
+            @pick="handlePick"
           />
         </section>
 
@@ -1910,7 +2704,11 @@ function handleSide() {
 
   <FinalOverlay
     :show="showFinalOverlay"
-    :map-name="pickedMap"
+    :map-name="vetoType === 'bo1' ? pickedMap : null"
+    :veto-type="vetoType"
+    :maps-data="finalMapsData"
+    :team-a-name="teamAName"
+    :team-b-name="teamBName"
     @close="showFinalOverlay = false"
   />
 
@@ -1939,7 +2737,7 @@ function handleSide() {
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
+  padding: 4px 12px;
   border: none;
   border-radius: 6px;
   font-size: 1rem;
@@ -1956,5 +2754,15 @@ function handleSide() {
 .btn-primary:hover {
   opacity: 0.9;
   transform: translateY(-1px);
+}
+
+.side-choose-box {
+  display: flex;
+  justify-content: space-between;
+}
+
+.side-choose-buttons {
+  gap: 12px;
+  display: flex;
 }
 </style>

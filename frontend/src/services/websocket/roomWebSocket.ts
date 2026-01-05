@@ -26,20 +26,9 @@ export class RoomWebSocket {
   private shouldReconnect = true; // Флаг для предотвращения переподключения при явном disconnect
 
   constructor(roomId: number, options: RoomWebSocketOptions = {}) {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Используем VITE_WS_URL или извлекаем хост из VITE_API_URL, иначе используем localhost:8080
-    let wsHost: string;
-    if (import.meta.env.VITE_WS_URL) {
-      wsHost = import.meta.env.VITE_WS_URL;
-    } else if (import.meta.env.VITE_API_URL) {
-      // Извлекаем хост из API URL (например, http://localhost:8080 -> localhost:8080)
-      const apiUrl = new URL(import.meta.env.VITE_API_URL);
-      wsHost = apiUrl.host;
-    } else {
-      // Fallback на localhost:8080 для бэкенда
-      wsHost =  'ban.wise-dream.site';
-    }
-    this.url = `${wsProtocol}//${wsHost}/ws/room/${roomId}`;
+    const wsHost = import.meta.env.VITE_WS_URL? import.meta.env.VITE_WS_URL : 'ws://localhost:8080/ws';
+    this.url = `${wsHost}/room/${roomId}`;
     this.options = options;
   }
 

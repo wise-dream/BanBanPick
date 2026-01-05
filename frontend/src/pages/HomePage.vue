@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../store/auth';
+import { useI18n } from '../composables/useI18n';
+
+const { t } = useI18n();
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -20,12 +23,12 @@ const goToMapPoolSelection = () => {
 <template>
   <div class="home-page">
     <div class="hero-section">
-      <h1 class="hero-title">Valorant Map Ban Tool</h1>
+      <h1 class="hero-title">{{ t('home.title') }}</h1>
       <p class="hero-description">
-        Create and manage map veto sessions for your Valorant matches
+        {{ t('home.description') }}
       </p>
       <button class="btn-primary" @click="goToMapPoolSelection">
-        Start Veto Process
+        {{ t('home.startVetoProcess') }}
       </button>
     </div>
   </div>

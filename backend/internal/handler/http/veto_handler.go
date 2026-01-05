@@ -201,12 +201,14 @@ func (h *VetoHandler) GetNextAction(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.NextActionResponse{
-		ActionType:  string(result.ActionType),
-		CurrentStep: result.CurrentStep,
-		CurrentTeam: result.CurrentTeam,
-		CanBan:      result.CanBan,
-		CanPick:     result.CanPick,
-		Message:     result.Message,
+		ActionType:         string(result.ActionType),
+		CurrentStep:        result.CurrentStep,
+		CurrentTeam:        result.CurrentTeam,
+		CanBan:             result.CanBan,
+		CanPick:            result.CanPick,
+		NeedsSideSelection: result.NeedsSideSelection,
+		SideSelectionTeam:  result.SideSelectionTeam,
+		Message:            result.Message,
 	})
 }
 
@@ -314,6 +316,7 @@ func (h *VetoHandler) SelectSide(c *gin.Context) {
 	result, err := h.selectSideUseCase.Execute(veto.SelectSideInput{
 		SessionID: uint(id),
 		Side:      req.Side,
+		Team:      req.Team,
 	})
 
 	if err != nil {
@@ -322,13 +325,54 @@ func (h *VetoHandler) SelectSide(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "session not found"})
 		case veto.ErrInvalidAction:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid action"})
+		case veto.ErrNotYourTurn:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "not your turn to select side"})
+		case veto.ErrSessionFinished:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "session is finished"})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		}
 		return
 	}
 
-	c.JSON(http.StatusOK, dto.ToVetoSessionResponse(result.Session))
+	// Находим комнату по session_id для отправки WebSocket сообщения
+	room, err := h.roomRepo.GetByVetoSessionID(uint(id))
+	if err == nil && room != nil {
+		// Конвертируем entity в DTO для правильной структуры с map_pool и actions
+		sessionDTO := dto.ToVetoSessionResponse(result.Session)
+		
+		// Загружаем map_pool для включения в ответ
+		if result.Session != nil {
+			mapPool, err := h.mapPoolRepo.GetByID(result.Session.MapPoolID)
+			if err == nil && mapPool != nil {
+				mapPoolResp := dto.ToMapPoolResponse(mapPool)
+				sessionDTO.MapPool = &mapPoolResp
+			}
+		}
+		
+		// Broadcast обновленное состояние сессии всем участникам комнаты
+		h.wsManager.BroadcastToRoom(room.ID, ws.Message{
+			Type: "veto:side",
+			Data: map[string]interface{}{
+				"session": sessionDTO,
+				"action":  result.Action,
+			},
+		})
+		
+		log.Printf("Broadcasted veto:side to room %d for session %d", room.ID, uint(id))
+	}
+
+	// Загружаем map_pool для включения в ответ (как и в других handler'ах)
+	sessionDTO := dto.ToVetoSessionResponse(result.Session)
+	if result.Session != nil {
+		mapPool, err := h.mapPoolRepo.GetByID(result.Session.MapPoolID)
+		if err == nil && mapPool != nil {
+			mapPoolResp := dto.ToMapPoolResponse(mapPool)
+			sessionDTO.MapPool = &mapPoolResp
+		}
+	}
+
+	c.JSON(http.StatusOK, sessionDTO)
 }
 
 // StartSession обрабатывает POST /api/veto/sessions/:id/start

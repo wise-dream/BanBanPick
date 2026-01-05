@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useI18n } from '../../composables/useI18n';
+
+const { t } = useI18n();
 
 const router = useRouter();
 </script>
@@ -11,7 +14,7 @@ const router = useRouter();
         <h2>MapBan</h2>
       </div>
       <div class="footer-bottom">
-        <p>&copy; {{ new Date().getFullYear() }} MapBan – All rights reserved</p>
+        <p>&copy; {{ new Date().getFullYear() }} MapBan – {{ t('footer.copyright') }}</p>
       </div>
     </div>
   </footer>

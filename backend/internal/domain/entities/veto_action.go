@@ -19,6 +19,7 @@ type VetoAction struct {
 	Team          string        `json:"team"`
 	ActionType    VetoActionType `json:"action_type"`
 	StepNumber    int           `json:"step_number"`
+	SelectedSide  *string       `json:"selected_side,omitempty"` // "attack" или "defence" - для действий типа pick
 	CreatedAt     time.Time     `json:"created_at"`
 }
 

@@ -132,6 +132,7 @@ const navigateToHome = () => {
 }
 
 .btn-secondary {
+  height: 36px;
   background: rgba(0, 0, 0, 0.9);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);

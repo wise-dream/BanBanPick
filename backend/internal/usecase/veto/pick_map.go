@@ -149,17 +149,29 @@ func (uc *PickMapUseCase) Execute(input PickMapInput) (*PickMapOutput, error) {
 		session.CurrentTeam = "A"
 	}
 
-	// Проверяем, завершена ли сессия
-	availableMapsAfterPick := uc.logicService.GetAvailableMaps(mapPool, append(session.Actions, *action))
-	if uc.logicService.IsVetoFinished(session, append(session.Actions, *action), availableMapsAfterPick) {
-		// Автоматически выбираем последнюю карту как десидер
-		if len(availableMapsAfterPick) == 1 {
-			session.SelectedMapID = &availableMapsAfterPick[0].ID
-			now := time.Now()
-			session.FinishedAt = &now
+	// Добавляем действие в список для проверок (временно, для проверки логики)
+	actionsWithNewPick := append(session.Actions, *action)
+	availableMapsAfterPick := uc.logicService.GetAvailableMaps(mapPool, actionsWithNewPick)
+	
+	// ВАЖНО: Проверяем, нужен ли выбор стороны ПЕРЕД проверкой завершения сессии
+	// Если нужен выбор стороны, НЕ устанавливаем статус finished
+	needsSideSelection := uc.logicService.NeedsSideSelection(session, actionsWithNewPick)
+	
+	if !needsSideSelection {
+		// Выбор стороны не нужен, проверяем завершение сессии
+		// Это может быть только для BO1 (нет выбора сторон)
+		if uc.logicService.IsVetoFinished(session, actionsWithNewPick, availableMapsAfterPick) {
+			// Для BO1: должна остаться только одна карта
+			if session.Type == entities.VetoTypeBo1 && len(availableMapsAfterPick) == 1 {
+				session.SelectedMapID = &availableMapsAfterPick[0].ID
+				now := time.Now()
+				session.FinishedAt = &now
+			}
+			// Для BO3/BO5: десидер выбирается после выбора сторон, не здесь
+			session.Status = entities.VetoStatusFinished
 		}
-		session.Status = entities.VetoStatusFinished
 	}
+	// Если needsSideSelection == true, НЕ устанавливаем finished, так как выбор стороны еще должен произойти
 
 	// Обновляем сессию
 	if err := uc.sessionRepo.Update(session); err != nil {

@@ -1,0 +1,53 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bbp-backend
+    # Загружаем переменные окружения из корневого .env файла
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - PORT=${PORT:-8080}
+      - DB_PATH=/app/data/app.db
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - JWT_EXPIRY=${JWT_EXPIRY:-24h}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    volumes:
+      # Монтируем директорию для БД (чтобы данные сохранялись)
+      - ./backend/data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Передаем переменные окружения как build args (Vite использует их во время сборки)
+        # Переменные читаются из корневого .env файла через docker-compose
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8080}
+        - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:8080/ws}
+    container_name: bbp-frontend
+    # Загружаем переменные окружения из корневого .env файла (если нужны в runtime)
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

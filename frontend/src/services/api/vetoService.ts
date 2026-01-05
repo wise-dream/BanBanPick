@@ -117,13 +117,15 @@ export async function pickMap(
  */
 export async function selectSide(
   sessionId: number,
-  side: 'attack' | 'defence'
+  side: 'attack' | 'defence',
+  team: 'A' | 'B'
 ): Promise<VetoSessionResponse> {
   try {
     const response = await apiClient.post<VetoSessionResponse>(
       `/api/veto/sessions/${sessionId}/select-side`,
       {
         side: side,
+        team: team,
       }
     );
     return response.data;

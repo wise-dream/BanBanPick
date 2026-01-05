@@ -41,7 +41,8 @@ func Load() *Config {
 
 	corsOrigin := os.Getenv("CORS_ORIGIN")
 	if corsOrigin == "" {
-		corsOrigin = "http://localhost:5173"
+		// По умолчанию разрешаем все origins (можно установить конкретные через CORS_ORIGIN)
+		corsOrigin = "*"
 	}
 
 	env := os.Getenv("ENVIRONMENT")

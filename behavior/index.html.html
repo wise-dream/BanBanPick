@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Map Banning</title>
+  <style>
+    :root {
+      --bg: #0f1923;
+      --panel: #111827;
+      --accent: #ff4655;
+      --accent-soft: #ff7a85;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --border: #1f2933;
+      --card: #020617;
+      --bad: #ef4444;
+      --good: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      position: relative;
+      z-index: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 55%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+    .site-bg-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .site-bg-layer::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+    }
+    .site-bg-layer::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .container {
+      max-width: 980px;
+      width: 100%;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+    h1 {
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .teams,
+    .controls {
+      background: rgba(15,23,42,0.9);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .team {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-size: 13px;
+    }
+    .team.active {
+      border-color: var(--accent-soft);
+      background: rgba(239,68,68,0.08);
+    }
+    .team span.badge {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      background: var(--accent);
+    }
+    .team-name {
+      width: 120px;
+      background: #020617;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+    .team-name:focus { border-color: var(--accent); }
+
+    .btn {
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #020617;
+      color: #f9fafb;
+      padding: 6px 10px;
+      font-size: 13px;
+      transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover { background: #111827; }
+    .btn-accent {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #0b1016;
+      font-weight: 600;
+    }
+    .btn-accent:hover { background: var(--accent-soft); }
+    .btn-pick {
+      background: #22c55e;
+      border-color: #16a34a;
+      color: #020617;
+      font-weight: 600;
+    }
+    .btn-pick:hover { background: #4ade80; }
+
+    .series-switch {
+      display: inline-flex;
+      gap: 4px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 2px;
+      background: #020617;
+    }
+    .series-btn {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+    }
+    .series-btn.active {
+      background: var(--accent);
+      color: #020617;
+      font-weight: 600;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 2fr 1.2fr;
+      gap: 16px;
+    }
+    .panel {
+      background: rgba(15,23,42,0.95);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .panel-title {
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .current-step {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .pill {
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .pill.step {
+      border-color: var(--accent-soft);
+      color: var(--accent-soft);
+    }
+    .pill.done {
+      border-color: var(--good);
+      color: var(--good);
+    }
+
+    .maps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .map-card {
+      background: transparent;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+      background-size: cover;
+      background-position: center;
+      background-blend-mode: normal;
+    }
+    .map-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      pointer-events: none;
+    }
+    .map-card > * { position: relative; z-index: 1; }
+    .map-name {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .map-status {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .map-actions { margin-top: 4px; }
+    .action-type {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .map-tag {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .map-tag.banned {
+      background: rgba(239,68,68,0.1);
+      color: var(--bad);
+      border: 1px solid rgba(239,68,68,0.4);
+    }
+    .map-tag.picked {
+      background: rgba(34,197,94,0.1);
+      color: var(--good);
+      border: 1px solid rgba(34,197,94,0.4);
+    }
+    .map-disabled {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .log {
+      height: 230px;
+      overflow-y: auto;
+      font-size: 13px;
+      padding-right: 4px;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+      color: var(--muted);
+    }
+    .log-entry strong { color: var(--accent-soft); }
+
+    .summary {
+      font-size: 13px;
+      background: #020617;
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .summary-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .side-choose-box {
+      display: none;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(250,250,250,0.12);
+      background: radial-gradient(circle at left, rgba(34,197,94,0.2), rgba(15,23,42,0.95));
+    }
+    .side-choose-label {
+      font-size: 13px;
+      color: #e5e7eb;
+      font-weight: 500;
+    }
+    .side-choose-emphasis { color: #22c55e; }
+
+    .final-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .final-card {
+      position: relative;
+      width: min(900px, 95vw);
+      height: min(520px, 65vh);
+      border-radius: 24px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 24px;
+      color: #f9fafb;
+    }
+    .final-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: var(--final-bg);
+      background-size: cover;
+      background-position: center;
+      filter: brightness(0.9);
+      z-index: 0;
+    }
+    .final-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.9));
+      z-index: 1;
+    }
+    .final-card > * { position: relative; z-index: 2; }
+    .final-map-name {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .final-subtitle {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .final-cards-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .final-map-card-compact {
+      flex: 1 1 0;
+      min-width: 0;
+      max-width: 260px;
+      border-radius: 14px;
+      overflow: hidden;
+      position: relative;
+      background-size: cover;
+      background-position: center;
+      border: 1px solid rgba(148,163,184,0.4);
+    }
+    .final-map-card-compact::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.25));
+    }
+    .final-map-card-inner {
+      position: relative;
+      z-index: 1;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .final-map-card-title {
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .final-map-card-mapname {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .final-map-card-sides {
+      font-size: 12px;
+      color: #e5e7eb;
+    }
+    .final-map-card-sides span.label {
+      color: #9ca3af;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .final-map-card-sides span.attack,
+    .final-subtitle span.attack {
+      color: #22c55e;
+    }
+    .final-map-card-sides span.defence,
+    .final-subtitle span.defence {
+      color: #f97373;
+    }
+
+    .map-ascent { background-image: url("img/ascent.png"); }
+    .map-bind { background-image: url("img/bind.png"); }
+    .map-haven { background-image: url("img/haven.png"); }
+    .map-split { background-image: url("img/split.png"); }
+    .map-lotus { background-image: url("img/lotus.png"); }
+    .map-icebox { background-image: url("img/icebox.png"); }
+    .map-sunset { background-image: url("img/sunset.png"); }
+    .map-pearl { background-image: url("img/pearl.png"); }
+    .map-fracture{ background-image: url("img/fracture.png"); }
+    .map-breeze { background-image: url("img/breeze.png"); }
+    .map-corrode { background-image: url("img/corrode.png"); }
+    .map-abyss { background-image: url("img/abyss.png"); }
+
+    .side-overlay-fullscreen {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, #1f2937 0, #020617 55%);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1500;
+    }
+    .side-full-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+    }
+    .side-full-icon {
+      height: 96px;
+      filter: drop-shadow(0 0 18px rgba(0,0,0,0.7));
+    }
+
+    @media (max-width: 600px) {
+      body { align-items: flex-start; }
+      .container { padding: 12px 8px; gap: 10px; }
+      header { flex-direction: column; align-items: stretch; }
+      h1 { font-size: 18px; }
+      .top-bar { flex-direction: column; align-items: stretch; }
+      .teams, .controls { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+      .team-name { width: 100px; font-size: 12px; }
+      .btn, .btn-accent { flex: 1 1 45%; justify-content: center; padding: 6px 4px; font-size: 12px; }
+      main { grid-template-columns: 1fr; }
+      .panel { padding: 10px; }
+      .panel-title { font-size: 13px; }
+      .final-card {
+        width: 95vw;
+        height: auto;
+        min-height: 55vh;
+        padding: 16px;
+      }
+      .final-map-name { font-size: 18px; }
+      .final-subtitle { font-size: 12px; }
+      .maps-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px;
+      }
+      .map-card { padding: 8px; }
+      .map-name { font-size: 12px; }
+      .map-status { font-size: 10px; }
+      .log { height: 180px; font-size: 12px; }
+      .side-full-icon { height: 72px; }
+      .side-full-content .final-map-name { font-size: 20px; }
+      .final-cards-row { flex-direction: column; }
+      .final-map-card-compact { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="site-bg-layer"></div>
+<div class="container">
+  <header>
+    <h1>Map Banning</h1>
+    <div class="top-bar">
+      <div class="teams">
+        <div id="teamABox" class="team">
+          <span class="badge">A</span>
+          A
+          <input id="teamAName" class="team-name" type="text" value="Team A (Higher Seed)">
+        </div>
+        <div id="teamBBox" class="team">
+          <span class="badge">B</span>
+          B
+          <input id="teamBName" class="team-name" type="text" value="Team B">
+        </div>
+      </div>
+      <div class="controls">
+        <div id="seriesSwitch" class="series-switch">
+          <button class="series-btn active" data-series="bo1">Bo1</button>
+          <button class="series-btn" data-series="bo3">Bo3</button>
+          <button class="series-btn" data-series="bo5">Bo5</button>
+        </div>
+        <button id="startBtn" class="btn btn-accent">Start</button>
+        <button id="swapBtn" class="btn">Swap A/B</button>
+        <button id="resetBtn" class="btn">Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Maps</div>
+          <div class="current-step">
+            Step:
+            <span id="stepLabel" class="pill step">Press "Start" to begin veto</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="sideChooseBox" class="side-choose-box">
+        <div class="side-choose-label" id="sideChooseLabel">
+          Choose side for current map:
+        </div>
+        <button id="sideAttackBtn" class="btn btn-pick">ATTACK</button>
+        <button id="sideDefenceBtn" class="btn btn-accent">DEFENCE</button>
+      </div>
+
+      <div id="mapsGrid" class="maps-grid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Summary</div>
+      </div>
+      <div class="summary">
+        <div class="summary-title">Maps</div>
+        <div id="summaryContent">No maps yet. Follow veto steps.</div>
+      </div>
+
+      <div class="panel-header" style="margin-top:12px;">
+        <div class="panel-title">Log</div>
+      </div>
+      <div id="logBox" class="log"></div>
+    </section>
+  </main>
+</div>
+
+<div id="finalOverlay" class="final-overlay">
+  <div class="final-card">
+    <div class="final-map-name" id="finalMapName"></div>
+    <div class="final-subtitle" id="finalSubtitle"></div>
+    <div id="finalCardsRow" class="final-cards-row"></div>
+    <button id="closeFinalBtn" class="btn" style="align-self:flex-end;margin-top:4px;">Close</button>
+  </div>
+</div>
+
+<div id="sideFullOverlay" class="side-overlay-fullscreen">
+  <div class="side-full-content">
+    <img id="sideFullIcon" class="side-full-icon" src="" alt="">
+    <div id="sideFullText" class="final-map-name"></div>
+    <div id="sideSubtitle" class="final-subtitle"></div>
+    <button id="closeSideBtn" class="btn">OK</button>
+  </div>
+</div>
+
+<script>
+  const finalOverlay = document.getElementById("finalOverlay");
+const finalMapNameEl = document.getElementById("finalMapName");
+const finalSubtitleEl = document.getElementById("finalSubtitle");
+const closeFinalBtn = document.getElementById("closeFinalBtn");
+
+const sideFullOverlay = document.getElementById("sideFullOverlay");
+const sideFullText = document.getElementById("sideFullText");
+const sideSubtitleEl = document.getElementById("sideSubtitle");
+const sideFullIcon = document.getElementById("sideFullIcon");
+const closeSideBtn = document.getElementById("closeSideBtn");
+
+const allMaps = [
+  "Ascent","Bind","Haven","Split","Lotus","Icebox",
+  "Sunset","Pearl","Fracture","Breeze","Corrode","Abyss"
+];
+
+const mapsGrid = document.getElementById("mapsGrid");
+const teamANameInput = document.getElementById("teamAName");
+const teamBNameInput = document.getElementById("teamBName");
+const teamABox = document.getElementById("teamABox");
+const teamBBox = document.getElementById("teamBBox");
+const stepLabel = document.getElementById("stepLabel");
+const resetBtn = document.getElementById("resetBtn");
+const swapBtn = document.getElementById("swapBtn");
+const startBtn = document.getElementById("startBtn");
+const logBox = document.getElementById("logBox");
+const summaryContent = document.getElementById("summaryContent");
+const seriesSwitch = document.getElementById("seriesSwitch");
+const sideChooseBox = document.getElementById("sideChooseBox");
+const sideChooseLabel = document.getElementById("sideChooseLabel");
+const sideAttackBtn = document.getElementById("sideAttackBtn");
+const sideDefenceBtn = document.getElementById("sideDefenceBtn");
+
+let state = {
+  seriesType: "bo1",
+  started: false,
+  finished: false,
+  stepIndex: 0,
+  bans: [],
+  picks: [],
+  mapSides: {},
+  currentTeamSimple: "A",
+  currentDeciderMap: null
+};
+
+const BAN_TIME_LIMIT = 20;
+let timerId = null;
+let timeLeft = BAN_TIME_LIMIT;
+
+function cleanTeamName(name) {
+  return (name || "")
+    .replace(/\s*\(Higher Seed\)/gi, "")
+    .trim();
+}
+
+function getSeriesLabel() {
+  if (state.seriesType === "bo3") return "Bo3";
+  if (state.seriesType === "bo5") return "Bo5";
+  return "Bo1";
+}
+
+/* --- SCENARIO (Bo3/Bo5 с decider) --- */
+function getScenario() {
+  if (state.seriesType === "bo3") {
+    return [
+      { type: "ban", team: "A" },
+      { type: "ban", team: "B" },
+      { type: "pick", team: "A", mapIndex: 1 },
+      { type: "side", team: "B", mapIndex: 1 },
+      { type: "pick", team: "B", mapIndex: 2 },
+      { type: "side", team: "A", mapIndex: 2 },
+      { type: "ban", team: "A" },
+      { type: "ban", team: "B" },
+      { type: "decider", mapIndex: 3 },
+      { type: "side", team: "A", mapIndex: 3 } // A выбирает сторону на decider
+    ];
+  }
+  if (state.seriesType === "bo5") {
+    return [
+      { type: "ban", team: "A" },
+      { type: "ban", team: "B" },
+      { type: "pick", team: "A", mapIndex: 1 },
+      { type: "side", team: "B", mapIndex: 1 },
+      { type: "pick", team: "B", mapIndex: 2 },
+      { type: "side", team: "A", mapIndex: 2 },
+      { type: "pick", team: "A", mapIndex: 3 },
+      { type: "side", team: "B", mapIndex: 3 },
+      { type: "pick", team: "B", mapIndex: 4 },
+      { type: "side", team: "A", mapIndex: 4 },
+      // decider: автоматически выбираем 5‑ю карту из оставшихся
+      { type: "decider", mapIndex: 5 },
+      // выбор стороны на 5‑й карте вручную (Team B по VCT)
+      { type: "side", team: "B", mapIndex: 5 }
+    ];
+  }
+  return [];
+}
+
+function currentStep() {
+  const scenario = getScenario();
+  if (state.seriesType === "bo1") return null;
+  if (state.stepIndex >= scenario.length) return null;
+  return scenario[state.stepIndex];
+}
+
+function log(message) {
+  const div = document.createElement("div");
+  div.className = "log-entry";
+  div.innerHTML = message;
+  logBox.appendChild(div);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function updateActiveTeam() {
+  let teamHighlight = "A";
+  if (state.seriesType === "bo1") {
+    teamHighlight = state.currentTeamSimple;
+  } else {
+    const step = currentStep();
+    if (step && step.team) teamHighlight = step.team;
+  }
+  teamABox.classList.toggle("active", teamHighlight === "A");
+  teamBBox.classList.toggle("active", teamHighlight === "B");
+}
+
+function updateStepLabel() {
+  if (!state.started) {
+    stepLabel.textContent = "Press \"Start\" to begin veto";
+    return;
+  }
+  if (state.finished) {
+    stepLabel.textContent = "Veto finished";
+    return;
+  }
+  const seriesLabel = getSeriesLabel();
+  if (state.seriesType === "bo1") {
+    const tName = state.currentTeamSimple === "A" ? teamANameInput.value : teamBNameInput.value;
+    stepLabel.textContent = `${seriesLabel}: map ban, turn — ${tName}`;
+    return;
+  }
+  const step = currentStep();
+  if (!step) {
+    stepLabel.textContent = `${seriesLabel}: finishing veto...`;
+    return;
+  }
+  if (step.type === "decider") {
+    stepLabel.textContent = `${seriesLabel}: decider map is random`;
+    return;
+  }
+  const teamName = step.team === "A" ? teamANameInput.value : teamBNameInput.value;
+  if (step.type === "ban") {
+    stepLabel.textContent = `${seriesLabel}: ${teamName} bans a map`;
+  } else if (step.type === "pick") {
+    stepLabel.textContent = `${seriesLabel}: ${teamName} picks map ${step.mapIndex}`;
+  } else if (step.type === "side") {
+    stepLabel.textContent = `${seriesLabel}: ${teamName} chooses side on map ${step.mapIndex}`;
+  }
+}
+
+function updateSummary() {
+  const seriesLabel = getSeriesLabel();
+  if (!state.finished) {
+    summaryContent.textContent = `${seriesLabel}: follow veto steps.`;
+    return;
+  }
+  if (state.picks.length === 0) {
+    summaryContent.textContent = `${seriesLabel}: no maps selected.`;
+    return;
+  }
+  const aNameRaw = teamANameInput.value || "Team A";
+  const bNameRaw = teamBNameInput.value || "Team B";
+  const aName = cleanTeamName(aNameRaw) || "Team A";
+  const bName = cleanTeamName(bNameRaw) || "Team B";
+  const lines = state.picks
+    .sort((a,b) => a.order - b.order)
+    .map(p => {
+      const mapName = p.map;
+      const sides = state.mapSides[mapName];
+      if (!sides) return `Map ${p.order}: ${mapName}`;
+      const att = sides.attackTeam === "A" ? aName : bName;
+      const def = sides.defenceTeam === "A" ? aName : bName;
+      return `Map ${p.order}: ${mapName} — ATTACK: ${att}, DEFENCE: ${def}`;
+    });
+  summaryContent.innerHTML = lines.join("<br>");
+}
+
+function startBanTimer() {
+  clearInterval(timerId);
+  timeLeft = BAN_TIME_LIMIT;
+  updateStepLabelWithTimer();
+  timerId = setInterval(() => {
+    timeLeft -= 1;
+    if (timeLeft <= 0) {
+      clearInterval(timerId);
+      if (state.seriesType === "bo1") {
+        state.currentTeamSimple = state.currentTeamSimple === "A" ? "B" : "A";
+      } else {
+        state.stepIndex = Math.min(state.stepIndex + 1, getScenario().length);
+      }
+      updateActiveTeam();
+      updateStepLabel();
+      timeLeft = BAN_TIME_LIMIT;
+    }
+    updateStepLabelWithTimer();
+  }, 1000);
+}
+
+function updateStepLabelWithTimer() {
+  if (state.seriesType === "bo1") {
+    const tName = state.currentTeamSimple === "A" ? teamANameInput.value : teamBNameInput.value;
+    stepLabel.textContent = `Bo1: ${tName} bans a map | ${timeLeft}s`;
+    return;
+  }
+  const step = currentStep();
+  if (!step) {
+    stepLabel.textContent = `${getSeriesLabel()}: finishing veto...`;
+    return;
+  }
+  const tName = step.team ? (step.team === "A" ? teamANameInput.value : teamBNameInput.value) : "";
+  if (step.type === "ban") {
+    stepLabel.textContent = `${getSeriesLabel()}: ${tName} bans | ${timeLeft}s`;
+  } else if (step.type === "pick") {
+    stepLabel.textContent = `${getSeriesLabel()}: ${tName} picks | ${timeLeft}s`;
+  } else if (step.type === "side") {
+    stepLabel.textContent = `${getSeriesLabel()}: ${tName} chooses side | ${timeLeft}s`;
+  } else {
+    stepLabel.textContent = `${getSeriesLabel()}: decider | ${timeLeft}s`;
+  }
+}
+
+function stopBanTimer() {
+  clearInterval(timerId);
+}
+
+function resetState(keepFormat = true) {
+  const seriesType = keepFormat ? state.seriesType : "bo1";
+  state = {
+    seriesType,
+    started: false,
+    finished: false,
+    stepIndex: 0,
+    bans: [],
+    picks: [],
+    mapSides: {},
+    currentTeamSimple: "A",
+    currentDeciderMap: null
+  };
+  logBox.innerHTML = "";
+  stepLabel.textContent = "Press \"Start\" to begin veto";
+  stepLabel.classList.remove("done");
+  stepLabel.classList.add("step");
+  stopBanTimer();
+  finalOverlay.style.display = "none";
+  sideFullOverlay.style.display = "none";
+  sideChooseBox.style.display = "none";
+  updateSeriesButtons();
+  updateActiveTeam();
+  updateSummary();
+  renderMaps();
+}
+
+function updateSeriesButtons() {
+  const buttons = seriesSwitch.querySelectorAll(".series-btn");
+  buttons.forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.series === state.seriesType);
+  });
+}
+
+function startVeto() {
+  if (state.started || state.finished) return;
+  state.started = true;
+  log(`New veto (${getSeriesLabel()}) started.`);
+  updateStepLabel();
+  updateActiveTeam();
+  startBanTimer();
+}
+
+function swapAB() {
+  if (state.started) {
+    alert("You can swap A/B only before start.");
+    return;
+  }
+  const aRaw = teamANameInput.value;
+  const bRaw = teamBNameInput.value;
+  const aName = cleanTeamName(aRaw) || "Team A";
+  const bName = cleanTeamName(bRaw) || "Team B";
+  teamANameInput.value = bName + " (Higher Seed)";
+  teamBNameInput.value = aName;
+}
+
+function finishBo1IfNeeded() {
+  const remaining = allMaps.filter(m => !state.bans.includes(m));
+  if (remaining.length === 1) {
+    const map = remaining[0];
+    state.picks = [{ map, order: 1 }];
+
+    const sides = ["ATTACK", "DEFENCE"];
+    const randomSide = sides[Math.floor(Math.random() * sides.length)];
+    const teamSidePicker = "A";
+    const otherTeam = "B";
+    let attackTeam, defenceTeam;
+    if (randomSide === "ATTACK") {
+      attackTeam = teamSidePicker;
+      defenceTeam = otherTeam;
+    } else {
+      attackTeam = otherTeam;
+      defenceTeam = teamSidePicker;
+    }
+    state.mapSides[map] = { attackTeam, defenceTeam };
+
+    const aName = cleanTeamName(teamANameInput.value || "Team A") || "Team A";
+    const bName = cleanTeamName(teamBNameInput.value || "Team B") || "Team B";
+    const attName = attackTeam === "A" ? aName : bName;
+    const defName = defenceTeam === "A" ? aName : bName;
+
+    log(
+      `Bo1: random map is <strong>${map}</strong>. ` +
+      `Side also random — ATTACK: <strong>${attName}</strong>, ` +
+      `DEFENCE: <strong>${defName}</strong>.`
+    );
+
+    state.finished = true;
+    stepLabel.textContent = "Veto finished";
+    stepLabel.classList.remove("step");
+    stepLabel.classList.add("done");
+    updateSummary();
+    showFinalMaps();
+    return true;
+  }
+  return false;
+}
+
+function applyBo1Action(mapName) {
+  state.bans.push(mapName);
+  const tName = state.currentTeamSimple === "A" ? teamANameInput.value : teamBNameInput.value;
+  log(`<strong>${tName}</strong> bans <strong>${mapName}</strong>.`);
+  if (!finishBo1IfNeeded()) {
+    state.currentTeamSimple = state.currentTeamSimple === "A" ? "B" : "A";
+    updateActiveTeam();
+    updateStepLabel();
+    startBanTimer();
+  }
+}
+
+function applyScenarioAction(mapName) {
+  const step = currentStep();
+  if (!step) return;
+
+  if (step.type === "ban") {
+    state.bans.push(mapName);
+    const tName = step.team === "A" ? teamANameInput.value : teamBNameInput.value;
+    log(`<strong>${tName}</strong> bans <strong>${mapName}</strong>.`);
+    state.stepIndex += 1;
+    proceedAfterStep();
+  } else if (step.type === "pick") {
+    state.picks.push({ map: mapName, order: step.mapIndex });
+    const tName = step.team === "A" ? teamANameInput.value : teamBNameInput.value;
+    log(`<strong>${tName}</strong> picks map ${step.mapIndex}: <strong>${mapName}</strong>.`);
+    state.stepIndex += 1;
+    proceedAfterStep();
+  }
+}
+
+/* --- FIX: decider для Bo3/Bo5 --- */
+function handleDecider() {
+  const remaining = allMaps.filter(
+    m => !state.bans.includes(m) && !state.picks.some(p => p.map === m)
+  );
+  if (remaining.length === 0) {
+    log("No maps left for decider.");
+    state.stepIndex += 1;
+    return;
+  }
+  const randomIndex = Math.floor(Math.random() * remaining.length);
+  const map = remaining[randomIndex];
+  const step = currentStep();
+  if (step && step.mapIndex) {
+    state.picks.push({ map, order: step.mapIndex });
+    state.currentDeciderMap = map;
+    log(`Decider (Map ${step.mapIndex}) is <strong>${map}</strong>.`);
+  }
+  state.stepIndex += 1;
+}
+
+/* --- FIX: чтобы после стороны на 4‑й карте Bo5 реально шёл decider и финал --- */
+function proceedAfterStep() {
+  stopBanTimer();
+  let step = currentStep();
+
+  // если текущий шаг — decider, сразу выбираем карту и переходим дальше
+  while (step && step.type === "decider") {
+    handleDecider();
+    step = currentStep();
+  }
+
+  step = currentStep();
+
+  if (step && step.type === "side") {
+    setupSideChooseUI(step);
+    updateStepLabel();
+    updateActiveTeam();
+    renderMaps();
+    return;
+  }
+
+  if (!step) {
+    state.finished = true;
+    stepLabel.textContent = "Veto finished";
+    stepLabel.classList.remove("step");
+    stepLabel.classList.add("done");
+    updateSummary();
+    showFinalMaps();
+  } else {
+    updateStepLabel();
+    updateActiveTeam();
+    startBanTimer();
+  }
+  renderMaps();
+}
+
+function setupSideChooseUI(step) {
+  sideChooseBox.style.display = "flex";
+  const tName = step.team === "A" ? teamANameInput.value : teamBNameInput.value;
+  const mapObj = state.picks.find(p => p.order === step.mapIndex);
+  const mapName = mapObj ? mapObj.map : state.currentDeciderMap;
+  sideChooseLabel.innerHTML =
+    `<span class="side-choose-emphasis">${getSeriesLabel()}</span>: ` +
+    `<strong>${tName}</strong> chooses side on ` +
+    `<strong>Map ${step.mapIndex} — ${mapName || "?"}</strong>`;
+}
+
+/* --- FIX: после последнего side вызываем proceedAfterStep() / финал --- */
+function commitSideChoice(side) {
+  const step = currentStep();
+  if (!step || step.type !== "side") return;
+
+  const mapObj = state.picks.find(p => p.order === step.mapIndex);
+  const mapName = mapObj ? mapObj.map : state.currentDeciderMap;
+  if (!mapName) return;
+
+  const teamSidePicker = step.team;
+  const otherTeam = teamSidePicker === "A" ? "B" : "A";
+  let attackTeam, defenceTeam;
+  if (side === "ATTACK") {
+    attackTeam = teamSidePicker;
+    defenceTeam = otherTeam;
+  } else {
+    attackTeam = otherTeam;
+    defenceTeam = teamSidePicker;
+  }
+
+  state.mapSides[mapName] = { attackTeam, defenceTeam };
+
+  const aNameRaw = teamANameInput.value || "Team A";
+  const bNameRaw = teamBNameInput.value || "Team B";
+  const aName = cleanTeamName(aNameRaw) || "Team A";
+  const bName = cleanTeamName(bNameRaw) || "Team B";
+  const attName = attackTeam === "A" ? aName : bName;
+  const defName = defenceTeam === "A" ? aName : bName;
+
+  log(
+    `<strong>${side}</strong> on map ${step.mapIndex} (${mapName}) — ` +
+    `ATTACK: <strong>${attName}</strong>, DEFENCE: <strong>${defName}</strong>.`
+  );
+  sideChooseBox.style.display = "none";
+
+  state.stepIndex += 1;
+  const nextStep = currentStep();
+  if (!nextStep) {
+    state.finished = true;
+    stepLabel.textContent = "Veto finished";
+    stepLabel.classList.remove("step");
+    stepLabel.classList.add("done");
+    updateSummary();
+    showFinalMaps();
+  } else {
+    proceedAfterStep(); // важно, чтобы после 4‑й карты Bo5 дошло до decider и map5
+  }
+  renderMaps();
+}
+
+function onMapAction(mapName) {
+  if (!state.started || state.finished) return;
+  if (state.picks.some(p => p.map === mapName)) return;
+  const step = currentStep();
+  stopBanTimer();
+
+  if (state.seriesType === "bo1" || !step) {
+    applyBo1Action(mapName);
+  } else {
+    if (step.type === "ban" || step.type === "pick") {
+      applyScenarioAction(mapName);
+    }
+  }
+  renderMaps();
+  updateSummary();
+}
+
+function renderMaps() {
+  mapsGrid.innerHTML = "";
+  const step = currentStep();
+  const isSideStep = step && step.type === "side";
+  let currentActionType = null;
+  if (state.seriesType === "bo1") {
+    currentActionType = "ban";
+  } else if (step && (step.type === "ban" || step.type === "pick")) {
+    currentActionType = step.type;
+  }
+
+  allMaps.forEach(map => {
+    const isBanned = state.bans.includes(map);
+    const isPicked = state.picks.some(p => p.map === map);
+    const card = document.createElement("div");
+    card.className = "map-card";
+    const mapClass = "map-" + map.toLowerCase();
+    card.classList.add(mapClass.replace(/\s+/g, "-"));
+
+    if (isBanned || isPicked || (state.finished && !isPicked)) {
+      card.classList.add("map-disabled");
+    }
+
+    const name = document.createElement("div");
+    name.className = "map-name";
+    name.textContent = map;
+
+    const status = document.createElement("div");
+    status.className = "map-status";
+    if (isPicked) {
+      const pObj = state.picks.find(p => p.map === map);
+      status.textContent = `Pick (Map ${pObj.order})`;
+    } else if (isBanned) {
+      status.textContent = "Banned";
+    } else {
+      status.textContent = "Available";
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "map-actions";
+
+    if (!isBanned && !isPicked && !state.finished && currentActionType && !isSideStep) {
+      const btn = document.createElement("button");
+      btn.className = "btn " + (currentActionType === "pick" ? "btn-pick" : "btn-accent");
+      btn.textContent = currentActionType === "pick" ? "Pick" : "Ban";
+      btn.onclick = () => onMapAction(map);
+      actions.appendChild(btn);
+    }
+
+    const actionTypeLabel = document.createElement("div");
+    actionTypeLabel.className = "action-type";
+    if (!state.finished) {
+      if (isSideStep) {
+        actionTypeLabel.textContent = "Now choose ATTACK/DEFENCE in the block above.";
+      } else if (currentActionType === "pick") {
+        actionTypeLabel.textContent = "Current step: pick (use Pick button).";
+      } else if (currentActionType === "ban") {
+        actionTypeLabel.textContent = "Current step: ban (use Ban button).";
+      }
+    }
+
+    card.appendChild(name);
+    card.appendChild(status);
+    card.appendChild(actions);
+    card.appendChild(actionTypeLabel);
+
+    if (isBanned || isPicked) {
+      const tag = document.createElement("div");
+      tag.className = "map-tag " + (isPicked ? "picked" : "banned");
+      tag.textContent = isPicked ? "PICKED" : "BANNED";
+      card.appendChild(tag);
+    }
+
+    mapsGrid.appendChild(card);
+  });
+}
+
+function showFinalMaps() {
+  const maps = state.picks.slice().sort((a,b)=>a.order-b.order);
+  if (maps.length === 0) return;
+
+  const aNameRaw = teamANameInput.value || "Team A";
+  const bNameRaw = teamBNameInput.value || "Team B";
+  const aName = cleanTeamName(aNameRaw) || "Team A";
+  const bName = cleanTeamName(bNameRaw) || "Team B";
+
+  const row = document.getElementById("finalCardsRow");
+  row.innerHTML = "";
+
+  if (state.seriesType === "bo1" && maps.length === 1) {
+    const p = maps[0];
+    const mapName = p.map;
+    const sides = state.mapSides[mapName] || {};
+    const attTeam = sides.attackTeam;
+    const defTeam = sides.defenceTeam;
+    const attName = attTeam === "A" ? aName : attTeam === "B" ? bName : "—";
+    const defName = defTeam === "A" ? aName : defTeam === "B" ? bName : "—";
+
+    finalMapNameEl.textContent = mapName;
+    finalSubtitleEl.innerHTML =
+      `<span class="label">SIDES</span><br>` +
+      `ATTACK: <span class="attack">${attName}</span><br>` +
+      `DEFENCE: <span class="defence">${defName}</span>`;
+
+    finalOverlay.querySelector(".final-card")
+      .style.setProperty("--final-bg", `url("img/${mapName.toLowerCase()}.png")`);
+  } else {
+    finalMapNameEl.textContent = "Veto result";
+    finalSubtitleEl.textContent = "";
+
+    maps.forEach(p => {
+      const mapName = p.map;
+      const sides = state.mapSides[mapName] || {};
+      const attName = sides.attackTeam === "A" ? aName : sides.attackTeam === "B" ? bName : "—";
+      const defName = sides.defenceTeam === "A" ? aName : sides.defenceTeam === "B" ? bName : "—";
+
+      const card = document.createElement("div");
+      card.className = "final-map-card-compact";
+      const bgClass = "map-" + mapName.toLowerCase().replace(/\s+/g, "-");
+      const sourceCard = document.querySelector("." + bgClass);
+      const bgImage = sourceCard ? window.getComputedStyle(sourceCard).backgroundImage : "";
+      if (bgImage && bgImage !== "none") {
+        card.style.backgroundImage = bgImage;
+      } else {
+        card.style.backgroundImage = `url("img/${mapName.toLowerCase()}.png")`;
+      }
+
+      const inner = document.createElement("div");
+      inner.className = "final-map-card-inner";
+
+      const title = document.createElement("div");
+      title.className = "final-map-card-title";
+      title.textContent = `Map ${p.order}`;
+
+      const name = document.createElement("div");
+      name.className = "final-map-card-mapname";
+      name.textContent = mapName;
+
+      const sidesBlock = document.createElement("div");
+      sidesBlock.className = "final-map-card-sides";
+      sidesBlock.innerHTML =
+        `<span class="label">Sides</span><br>` +
+        `ATTACK: <span class="attack">${attName}</span><br>` +
+        `DEFENCE: <span class="defence">${defName}</span>`;
+
+      inner.appendChild(title);
+      inner.appendChild(name);
+      inner.appendChild(sidesBlock);
+      card.appendChild(inner);
+      row.appendChild(card);
+    });
+
+    let bgFile = "background.png";
+    if (state.seriesType === "bo3") bgFile = "background_bo3.jpg";
+    if (state.seriesType === "bo5") bgFile = "background_bo5.jpg";
+    finalOverlay.querySelector(".final-card")
+      .style.setProperty("--final-bg", `url("img/${bgFile}")`);
+  }
+
+  finalOverlay.style.display = "flex";
+}
+
+/* --- INIT / EVENTS --- */
+seriesSwitch.addEventListener("click", (e) => {
+  const btn = e.target.closest(".series-btn");
+  if (!btn) return;
+  if (state.started && !state.finished) {
+    alert("You can change format only before start or after reset.");
+    return;
+  }
+  state.seriesType = btn.dataset.series;
+  resetState();
+});
+
+startBtn.addEventListener("click", startVeto);
+resetBtn.addEventListener("click", () => resetState());
+swapBtn.addEventListener("click", swapAB);
+closeFinalBtn.addEventListener("click", () => finalOverlay.style.display = "none");
+closeSideBtn.addEventListener("click", () => sideFullOverlay.style.display = "none");
+sideAttackBtn.addEventListener("click", () => commitSideChoice("ATTACK"));
+sideDefenceBtn.addEventListener("click", () => commitSideChoice("DEFENCE"));
+
+resetState();
+
+</script>
+</body>
+</html>

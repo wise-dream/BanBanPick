@@ -80,6 +80,7 @@ export interface VetoActionResponse {
   team: string;
   action_type: string;
   step_number: number;
+  selected_side?: 'attack' | 'defence'; // Выбранная сторона для этого действия (если это pick)
   created_at: string;
 }
 
@@ -89,6 +90,8 @@ export interface NextActionResponse {
   current_team: string;
   can_ban: boolean;
   can_pick: boolean;
+  needs_side_selection: boolean;
+  side_selection_team?: string;
   message?: string;
 }
 
@@ -129,6 +132,7 @@ export interface RoomResponse {
   game_id: number;
   map_pool_id?: number;
   map_pool?: MapPoolResponse;
+  veto_type?: 'bo1' | 'bo3' | 'bo5'; // Тип вето
   veto_session_id?: number;
   veto_session?: VetoSessionResponse;
   max_participants: number;
@@ -143,8 +147,16 @@ export interface CreateRoomRequest {
   type: 'public' | 'private';
   game_id: number;
   map_pool_id?: number;
+  veto_type?: 'bo1' | 'bo3' | 'bo5'; // Тип вето
   max_participants?: number;
   password?: string; // Пароль для приватных комнат (опционально)
+}
+
+export interface UpdateRoomRequest {
+  map_pool_id?: number;
+  veto_type?: 'bo1' | 'bo3' | 'bo5'; // Тип вето
+  veto_session_id?: number;
+  status?: 'waiting' | 'active' | 'finished';
 }
 
 export interface JoinRoomRequest {

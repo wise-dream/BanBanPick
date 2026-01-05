@@ -11,12 +11,14 @@ type GetNextActionUseCase struct {
 }
 
 type GetNextActionOutput struct {
-	ActionType  NextActionType `json:"action_type"`
-	CurrentStep int            `json:"current_step"`
-	CurrentTeam string         `json:"current_team"`
-	CanBan      bool           `json:"can_ban"`
-	CanPick     bool           `json:"can_pick"`
-	Message     string         `json:"message,omitempty"`
+	ActionType        NextActionType `json:"action_type"`
+	CurrentStep       int            `json:"current_step"`
+	CurrentTeam       string         `json:"current_team"`
+	CanBan            bool           `json:"can_ban"`
+	CanPick           bool           `json:"can_pick"`
+	NeedsSideSelection bool          `json:"needs_side_selection"` // Нужен ли выбор стороны после последнего действия
+	SideSelectionTeam string         `json:"side_selection_team,omitempty"` // Какая команда должна выбрать сторону
+	Message           string         `json:"message,omitempty"`
 }
 
 func NewGetNextActionUseCase(
@@ -62,15 +64,43 @@ func (uc *GetNextActionUseCase) Execute(sessionID uint) (*GetNextActionOutput, e
 	// Определяем тип следующего действия
 	nextActionType := uc.logicService.GetNextActionType(session, session.Actions, len(availableMaps))
 	
-	// Проверяем, завершена ли сессия
+	// Проверяем, нужен ли выбор стороны после последнего действия
+	// ВАЖНО: Эта проверка должна быть ПЕРЕД проверкой завершения сессии
+	// Потому что даже если сессия "завершена" (все карты пикнуты/забанены),
+	// выбор стороны все еще может быть необходим
+	needsSideSelection := uc.logicService.NeedsSideSelection(session, session.Actions)
+	sideSelectionTeam := ""
+	if needsSideSelection && len(session.Actions) > 0 {
+		lastAction := session.Actions[len(session.Actions)-1]
+		sideSelectionTeam = uc.logicService.GetSideSelectionTeam(session.Type, lastAction.StepNumber)
+	}
+
+	// Если нужен выбор стороны, блокируем следующие действия и возвращаем выбор стороны
+	// даже если сессия технически "завершена" (все карты выбраны)
+	if needsSideSelection {
+		return &GetNextActionOutput{
+			ActionType:         NextActionTypeBan, // Не используется, но нужен для структуры
+			CurrentStep:        currentStep,
+			CurrentTeam:        sideSelectionTeam,
+			CanBan:             false,
+			CanPick:            false,
+			NeedsSideSelection: true,
+			SideSelectionTeam:  sideSelectionTeam,
+			Message:            "Side selection required",
+		}, nil
+	}
+
+	// Проверяем, завершена ли сессия (только если выбор стороны не нужен)
 	if uc.logicService.IsVetoFinished(session, session.Actions, availableMaps) {
 		return &GetNextActionOutput{
-			ActionType:  NextActionTypeBan,
-			CurrentStep: currentStep,
-			CurrentTeam: currentTeam,
-			CanBan:      false,
-			CanPick:     false,
-			Message:     "Veto process is finished",
+			ActionType:         NextActionTypeBan,
+			CurrentStep:        currentStep,
+			CurrentTeam:        currentTeam,
+			CanBan:             false,
+			CanPick:            false,
+			NeedsSideSelection: false,
+			SideSelectionTeam:  "",
+			Message:            "Veto process is finished",
 		}, nil
 	}
 
@@ -78,10 +108,12 @@ func (uc *GetNextActionUseCase) Execute(sessionID uint) (*GetNextActionOutput, e
 	canPick := nextActionType == NextActionTypePick || nextActionType == NextActionTypeBoth
 
 	return &GetNextActionOutput{
-		ActionType:  nextActionType,
-		CurrentStep: currentStep,
-		CurrentTeam: currentTeam,
-		CanBan:      canBan,
-		CanPick:     canPick,
+		ActionType:         nextActionType,
+		CurrentStep:        currentStep,
+		CurrentTeam:        currentTeam,
+		CanBan:             canBan,
+		CanPick:            canPick,
+		NeedsSideSelection: false,
+		SideSelectionTeam:  "",
 	}, nil
 }

@@ -1,0 +1,27 @@
+# Пример docker-compose.override.yml для локальной разработки
+# Скопируйте этот файл в docker-compose.override.yml для переопределения настроек
+# docker-compose автоматически использует override файл, если он существует
+
+version: '3.8'
+
+services:
+  backend:
+    # Для локальной разработки можно монтировать исходный код
+    # volumes:
+    #   - ./backend:/app
+    #   - ./backend/data:/app/data  # Данные БД остаются на хосте
+    
+    environment:
+      - ENVIRONMENT=development
+      - CORS_ORIGIN=http://localhost:3000,http://localhost:5173,http://localhost:80
+      
+  frontend:
+    # Для локальной разработки можно использовать dev-сервер
+    # build:
+    #   context: ./frontend
+    #   dockerfile: Dockerfile.dev  # если создадите Dockerfile.dev
+    # ports:
+    #   - "5173:5173"  # Vite dev server порт
+    environment:
+      - VITE_API_URL=http://localhost:8080
+      - VITE_WS_URL=ws://localhost:8080/ws

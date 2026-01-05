@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
+import { useI18n } from '../composables/useI18n';
+
+const { t } = useI18n();
 
 interface Props {
   show: boolean;
@@ -38,7 +41,7 @@ function showSideRandom() {
   const sides: ('ATTACK' | 'DEFENCE')[] = ['ATTACK', 'DEFENCE'];
   
   sideResult.value = 'ATTACK';
-  sideSubtitle.value = 'Выбор стороны...';
+  sideSubtitle.value = t('veto.selectSide') + '...';
   
   showFullscreen.value = true;
   showCard.value = false;
@@ -90,7 +93,7 @@ function showSideRandom() {
       <div class="final-card side-final-card" :style="{ '--final-bg': cardBg }">
         <div class="final-map-name">{{ sideResult }}</div>
         <div class="final-subtitle">{{ sideSubtitle }}</div>
-        <button class="btn btn-accent" @click="emit('close')">OK</button>
+        <button class="btn btn-accent" @click="emit('close')">{{ t('common.ok') }}</button>
       </div>
     </div>
   </div>

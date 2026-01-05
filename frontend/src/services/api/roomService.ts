@@ -177,6 +177,7 @@ export function roomResponseToRoom(response: RoomResponse): Room {
     status: response.status as 'waiting' | 'active' | 'finished',
     gameId: response.game_id,
     mapPoolId: response.map_pool_id || undefined,
+    vetoType: response.veto_type || undefined,
     vetoSessionId: response.veto_session_id || undefined,
     maxParticipants: response.max_participants,
     createdAt: response.created_at,

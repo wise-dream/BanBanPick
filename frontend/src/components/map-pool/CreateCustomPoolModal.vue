@@ -4,6 +4,7 @@ import { X } from 'lucide-vue-next';
 import { getAllMaps, saveCustomPool } from '../../services/mapPoolService';
 import type { Map } from '../../types';
 import { useI18n } from '../../composables/useI18n';
+import InputText from 'primevue/inputtext';
 
 interface Props {
   isOpen: boolean;
@@ -73,7 +74,7 @@ const handleCreate = async () => {
   } catch (err: any) {
     const apiError = err as { message?: string; code?: string };
     if (apiError.code === 'HTTP_409') {
-      error.value = 'Пул с таким именем уже существует';
+      error.value = t('errors.poolNameExists');
     } else if (apiError.message) {
       error.value = apiError.message;
     } else {
@@ -113,13 +114,12 @@ watch(() => props.isOpen, (isOpen) => {
           <label for="pool-name" class="form-label">
             {{ t('mapPool.poolName') }}
           </label>
-          <input
+          <InputText
             id="pool-name"
             v-model="poolName"
-            type="text"
-            class="form-input"
             :placeholder="t('mapPool.poolNamePlaceholder')"
             maxlength="100"
+            class="w-full"
           />
         </div>
 
@@ -152,7 +152,7 @@ watch(() => props.isOpen, (isOpen) => {
         </button>
         <button class="btn btn-primary" @click="handleCreate" :disabled="selectedMapIds.length === 0 || isLoading">
           <span v-if="!isLoading">{{ t('mapPool.create') }}</span>
-          <span v-else>{{ t('common.loading') || 'Создание...' }}</span>
+          <span v-else>{{ t('common.loading') }}</span>
         </button>
       </div>
     </div>

@@ -58,12 +58,22 @@ const handleSubmit = async () => {
     const apiError = error as ApiError;
     
     // Обработка различных типов ошибок
-    if (apiError.code === 'HTTP_401' || apiError.message.includes('invalid')) {
+    const errorCode = apiError.code || '';
+    const errorMessage = apiError.message?.toLowerCase() || '';
+    
+    if (errorCode === 'HTTP_401' || errorCode === 'HTTP_403' || errorMessage.includes('invalid') || errorMessage.includes('неверн')) {
       errors.value.submit = t('auth.invalidCredentials');
-    } else if (apiError.code === 'NETWORK_ERROR') {
-      errors.value.submit = 'Ошибка сети. Проверьте подключение к интернету.';
+    } else if (errorCode === 'NETWORK_ERROR') {
+      errors.value.submit = t('auth.networkError');
+    } else if (errorCode === 'HTTP_400') {
+      // Ошибка валидации от бэкенда
+      errors.value.submit = apiError.message || t('auth.validationError');
+    } else if (errorCode === 'HTTP_429') {
+      // Rate limiting
+      errors.value.submit = t('auth.rateLimitError');
     } else {
-      errors.value.submit = apiError.message || t('auth.invalidCredentials');
+      // Другие ошибки
+      errors.value.submit = apiError.message || t('auth.loginError');
     }
   } finally {
     isLoading.value = false;

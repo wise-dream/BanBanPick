@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useI18n } from '../../composables/useI18n';
 import { X, Eye, EyeOff } from 'lucide-vue-next';
 import { getAllPools } from '../../services/mapPoolService';
+import Select from 'primevue/select';
 
 interface Props {
   show: boolean;
@@ -26,6 +27,29 @@ const showPassword = ref(false);
 const errors = ref<Record<string, string>>({});
 const isLoadingPools = ref(false);
 const availablePools = ref<Array<{ id: number; name: string }>>([]);
+
+// Опции для PrimeVue Select
+const roomTypeOptions = computed(() => [
+  { label: t('rooms.type.public'), value: 'public' },
+  { label: t('rooms.type.private'), value: 'private' }
+]);
+
+const mapPoolOptions = computed(() => {
+  const options = [{ label: isLoadingPools.value ? t('common.loading') : t('rooms.noMapPool'), value: null }];
+  return [
+    ...options,
+    ...availablePools.value.map(pool => ({
+      label: pool.name,
+      value: pool.id
+    }))
+  ];
+});
+
+const bestOfOptions = computed(() => [
+  { label: 'Best of 1', value: 'bo1' },
+  { label: 'Best of 3', value: 'bo3' },
+  { label: 'Best of 5', value: 'bo5' }
+]);
 
 // Загружаем пулы при монтировании
 onMounted(async () => {
@@ -131,14 +155,15 @@ const handleClose = () => {
 
             <div class="form-group">
               <label for="roomType" class="form-label">{{ t('rooms.roomType') }}</label>
-              <select
+              <Select
                 id="roomType"
                 v-model="roomType"
-                class="form-input"
-              >
-                <option value="public">{{ t('rooms.type.public') }}</option>
-                <option value="private">{{ t('rooms.type.private') }}</option>
-              </select>
+                :options="roomTypeOptions"
+                optionLabel="label"
+                optionValue="value"
+                :placeholder="t('bestOf.selectRoomTypePlaceholder')"
+                fluid
+              />
             </div>
 
             <div v-if="roomType === 'private'" class="form-group">
@@ -170,34 +195,29 @@ const handleClose = () => {
 
             <div class="form-group">
               <label for="mapPool" class="form-label">{{ t('rooms.mapPool') }} ({{ t('common.optional') }})</label>
-              <select
+              <Select
                 id="mapPool"
                 v-model="selectedPoolId"
-                class="form-input"
+                :options="mapPoolOptions"
+                optionLabel="label"
+                optionValue="value"
+                :placeholder="isLoadingPools ? t('common.loading') : t('rooms.noMapPool')"
                 :disabled="isLoadingPools"
-              >
-                <option :value="null">{{ isLoadingPools ? t('common.loading') : t('rooms.noMapPool') }}</option>
-                <option
-                  v-for="pool in availablePools"
-                  :key="pool.id"
-                  :value="pool.id"
-                >
-                  {{ pool.name }}
-                </option>
-              </select>
+                fluid
+              />
             </div>
 
             <div class="form-group">
               <label for="bestOf" class="form-label">{{ t('rooms.bestOf') }}</label>
-              <select
+              <Select
                 id="bestOf"
                 v-model="selectedBestOf"
-                class="form-input"
-              >
-                <option value="bo1">Best of 1</option>
-                <option value="bo3">Best of 3</option>
-                <option value="bo5">Best of 5</option>
-              </select>
+                :options="bestOfOptions"
+                optionLabel="label"
+                optionValue="value"
+                :placeholder="t('bestOf.selectBestOfPlaceholder')"
+                fluid
+              />
             </div>
 
             <div class="form-group">

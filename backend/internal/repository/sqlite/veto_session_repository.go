@@ -69,6 +69,7 @@ func (r *vetoSessionRepository) GetByID(id uint) (*entities.VetoSession, error) 
 			Team:          actionModel.Team,
 			ActionType:    entities.VetoActionType(actionModel.ActionType),
 			StepNumber:    actionModel.StepNumber,
+			SelectedSide:  actionModel.SelectedSide,
 			CreatedAt:     actionModel.CreatedAt,
 		}
 	}
@@ -103,6 +104,7 @@ func (r *vetoSessionRepository) GetByShareToken(token string) (*entities.VetoSes
 			Team:          actionModel.Team,
 			ActionType:    entities.VetoActionType(actionModel.ActionType),
 			StepNumber:    actionModel.StepNumber,
+			SelectedSide:  actionModel.SelectedSide,
 			CreatedAt:     actionModel.CreatedAt,
 		}
 	}
@@ -136,6 +138,7 @@ func (r *vetoSessionRepository) GetByUserID(userID uint) ([]entities.VetoSession
 				Team:          actionModel.Team,
 				ActionType:    entities.VetoActionType(actionModel.ActionType),
 				StepNumber:    actionModel.StepNumber,
+				SelectedSide:  actionModel.SelectedSide,
 				CreatedAt:     actionModel.CreatedAt,
 			}
 		}

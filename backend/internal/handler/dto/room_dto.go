@@ -9,6 +9,7 @@ type CreateRoomRequest struct {
 	Type            string  `json:"type" binding:"required,oneof=public private"`
 	GameID          uint    `json:"game_id" binding:"required"`
 	MapPoolID       *uint   `json:"map_pool_id"`
+	VetoType        *string `json:"veto_type" binding:"omitempty,oneof=bo1 bo3 bo5"` // Тип вето (bo1, bo3, bo5)
 	MaxParticipants *int    `json:"max_participants" binding:"omitempty,min=2,max=20"`
 	Password        *string `json:"password" binding:"omitempty,min=4,max=50"` // Пароль для приватных комнат (опционально)
 }
@@ -20,6 +21,8 @@ type JoinRoomRequest struct {
 
 // UpdateRoomRequest DTO для обновления комнаты
 type UpdateRoomRequest struct {
+	MapPoolID     *uint   `json:"map_pool_id"` // ID пула карт
+	VetoType      *string `json:"veto_type" binding:"omitempty,oneof=bo1 bo3 bo5"` // Тип вето (bo1, bo3, bo5)
 	VetoSessionID *uint   `json:"veto_session_id"` // ID сессии вето
 	Status        *string `json:"status" binding:"omitempty,oneof=waiting active finished"` // Статус комнаты
 }

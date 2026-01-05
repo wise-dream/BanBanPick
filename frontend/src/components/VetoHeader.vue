@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from '../composables/useI18n';
 import type { Team } from '../types/veto';
+
+const { t } = useI18n();
 
 interface Props {
   currentTeam: Team;
@@ -24,7 +27,7 @@ const emit = defineEmits<Emits>();
 <template>
   <header>
     <div>
-      <h1>Map Banning</h1>
+      <h1>{{ t('veto.mapBanning') }}</h1>
       <div class="tagline"></div>
     </div>
 
@@ -46,28 +49,28 @@ const emit = defineEmits<Emits>();
           class="btn btn-accent" 
           @click="emit('start')"
         >
-          Начать
+          {{ t('veto.start') }}
         </button>
         <button 
           v-if="started && !finished" 
           class="btn" 
           @click="emit('swap')"
         >
-          Сменить ход
+          {{ t('veto.swap') }}
         </button>
         <button 
           v-if="started" 
           class="btn" 
           @click="emit('reset')"
         >
-          Сброс
+          {{ t('veto.reset') }}
         </button>
         <button 
           v-if="started && finished" 
           class="btn" 
           @click="emit('side')"
         >
-          Выбор стороны
+          {{ t('veto.selectSide') }}
         </button>
       </div>
     </div>

@@ -57,7 +57,7 @@ const loadRooms = async () => {
     applyFilters();
   } catch (err) {
     const apiError = err as ApiError;
-    error.value = apiError.message || 'Не удалось загрузить комнаты';
+    error.value = apiError.message || t('errors.roomsLoadError');
     console.error('Error loading rooms:', err);
   } finally {
     isLoading.value = false;
@@ -118,6 +118,7 @@ const handleCreateRoom = async (roomData: {
       type: roomData.type,
       game_id: 1, // Valorant
       map_pool_id: roomData.mapPoolId,
+      veto_type: roomData.bestOf, // Передаем veto_type из bestOf
       max_participants: 2, // Fixed: 2 participants (one from each team)
       password: roomData.password, // Пароль для приватных комнат
     });
@@ -212,7 +213,7 @@ const handleRoomJoin = async (room: Room) => {
     }
   } catch (err) {
     const apiError = err as ApiError;
-    error.value = apiError.message || 'Не удалось присоединиться к комнате';
+    error.value = apiError.message || t('errors.roomJoinError');
     setTimeout(() => {
       error.value = null;
     }, 3000);
@@ -246,7 +247,7 @@ const handlePasswordSubmit = async (password: string) => {
     if (apiError.code === 'HTTP_400' && apiError.message.includes('code')) {
       error.value = t('rooms.invalidPassword');
     } else {
-      error.value = apiError.message || 'Не удалось присоединиться к комнате';
+      error.value = apiError.message || t('errors.roomJoinError');
     }
     setTimeout(() => {
       error.value = null;

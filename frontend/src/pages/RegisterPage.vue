@@ -61,18 +61,41 @@ const handleSubmit = async () => {
     const apiError = error as ApiError;
     
     // Обработка различных типов ошибок
-    if (apiError.code === 'HTTP_409' || apiError.message.includes('already exists')) {
-      if (apiError.message.includes('email')) {
-        errors.value.email = 'Email уже используется';
-      } else if (apiError.message.includes('username')) {
-        errors.value.username = 'Имя пользователя уже занято';
+    const errorMessage = apiError.message?.toLowerCase() || '';
+    const errorCode = apiError.code || '';
+    
+    console.log('Registration error:', { code: errorCode, message: apiError.message, error: apiError });
+    
+    // Проверяем HTTP статус код 409 (Conflict) - дубликат данных
+    if (errorCode === 'HTTP_409') {
+      // Определяем тип дубликата по тексту сообщения
+      // Бэкенд возвращает: "email already exists" или "username already exists"
+      if (errorMessage.includes('email') || errorMessage.includes('почт')) {
+        errors.value.email = t('auth.emailAlreadyExists');
+      } else if (errorMessage.includes('username') || errorMessage.includes('имя пользователя') || errorMessage.includes('никнейм')) {
+        errors.value.username = t('auth.usernameAlreadyExists');
       } else {
-        errors.value.submit = apiError.message;
+        // Если не удалось определить тип, показываем общую ошибку
+        errors.value.submit = apiError.message || t('auth.registerError');
       }
-    } else if (apiError.code === 'NETWORK_ERROR') {
-      errors.value.submit = 'Ошибка сети. Проверьте подключение к интернету.';
+    } else if (errorCode === 'NETWORK_ERROR') {
+      // Ошибка сети
+      errors.value.submit = t('auth.networkError');
+    } else if (errorCode === 'HTTP_400') {
+      // Ошибка валидации от бэкенда
+      // Может быть ошибка валидации email, username или password
+      if (errorMessage.includes('email')) {
+        errors.value.email = apiError.message || t('auth.emailInvalid');
+      } else if (errorMessage.includes('username')) {
+        errors.value.username = apiError.message || t('auth.usernameRequired');
+      } else if (errorMessage.includes('password')) {
+        errors.value.password = apiError.message || t('auth.passwordMinLength');
+      } else {
+        errors.value.submit = apiError.message || t('auth.validationError');
+      }
     } else {
-      errors.value.submit = apiError.message || 'Ошибка при регистрации';
+      // Другие ошибки (500, 503 и т.д.)
+      errors.value.submit = apiError.message || t('auth.registerError');
     }
   } finally {
     isLoading.value = false;
@@ -144,6 +167,8 @@ const handleSubmit = async () => {
             />
             <span v-if="errors.confirmPassword" class="error-message">{{ errors.confirmPassword }}</span>
           </div>
+
+          <span v-if="errors.submit" class="error-message submit-error">{{ errors.submit }}</span>
 
           <button
             type="submit"
@@ -254,6 +279,12 @@ const handleSubmit = async () => {
   font-size: 0.85rem;
   color: #ef4444;
   margin-top: 0.25rem;
+}
+
+.submit-error {
+  text-align: center;
+  margin-top: -0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .btn {

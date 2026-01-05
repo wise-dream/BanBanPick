@@ -123,7 +123,7 @@ func main() {
 	getNextActionUseCase := veto.NewGetNextActionUseCase(vetoSessionRepo, mapPoolRepo, vetoLogicService)
 	banMapUseCase := veto.NewBanMapUseCase(vetoSessionRepo, vetoActionRepo, mapRepo, mapPoolRepo, vetoLogicService)
 	pickMapUseCase := veto.NewPickMapUseCase(vetoSessionRepo, vetoActionRepo, mapRepo, mapPoolRepo, vetoLogicService)
-	selectSideUseCase := veto.NewSelectSideUseCase(vetoSessionRepo)
+	selectSideUseCase := veto.NewSelectSideUseCase(vetoSessionRepo, vetoActionRepo, mapPoolRepo, vetoLogicService)
 	resetSessionUseCase := veto.NewResetSessionUseCase(vetoSessionRepo, vetoActionRepo)
 	startSessionUseCase := veto.NewStartSessionUseCase(vetoSessionRepo)
 

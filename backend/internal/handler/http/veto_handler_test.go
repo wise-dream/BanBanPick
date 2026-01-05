@@ -8,16 +8,45 @@ import (
 	"testing"
 
 	"github.com/bbp/backend/internal/handler/dto"
+	"github.com/bbp/backend/internal/repository/models"
 	"github.com/bbp/backend/internal/repository/sqlite"
 	"github.com/bbp/backend/internal/usecase/veto"
 	"github.com/bbp/backend/pkg/database"
-	"github.com/bbp/backend/internal/repository/models"
+	ws "github.com/bbp/backend/pkg/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
+func setupVetoTestDB(t *testing.T) (*gorm.DB, func()) {
+	db, err := database.NewDatabase(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+
+	// Миграции для всех моделей, используемых в тестах
+	if err := database.Migrate(db,
+		&models.UserModel{},
+		&models.GameModel{},
+		&models.MapModel{},
+		&models.MapPoolModel{},
+		&models.RoomModel{},
+		&models.RoomParticipantModel{},
+		&models.VetoSessionModel{},
+		&models.VetoActionModel{},
+	); err != nil {
+		t.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	cleanup := func() {
+		database.Close(db)
+	}
+
+	return db, cleanup
+}
+
 func setupVetoTestRouter(t *testing.T) (*gin.Engine, func()) {
-	db, cleanup := setupTestDB(t)
+	db, cleanup := setupVetoTestDB(t)
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -28,6 +57,7 @@ func setupVetoTestRouter(t *testing.T) (*gin.Engine, func()) {
 	mapRepo := sqlite.NewMapRepository(db)
 	mapPoolRepo := sqlite.NewMapPoolRepository(db)
 	gameRepo := sqlite.NewGameRepository(db)
+	roomRepo := sqlite.NewRoomRepository(db)
 
 	// Инициализируем VetoLogicService
 	vetoLogicService := veto.NewVetoLogicService()
@@ -38,8 +68,12 @@ func setupVetoTestRouter(t *testing.T) (*gin.Engine, func()) {
 	getNextActionUseCase := veto.NewGetNextActionUseCase(vetoSessionRepo, mapPoolRepo, vetoLogicService)
 	banMapUseCase := veto.NewBanMapUseCase(vetoSessionRepo, vetoActionRepo, mapRepo, mapPoolRepo, vetoLogicService)
 	pickMapUseCase := veto.NewPickMapUseCase(vetoSessionRepo, vetoActionRepo, mapRepo, mapPoolRepo, vetoLogicService)
-	selectSideUseCase := veto.NewSelectSideUseCase(vetoSessionRepo)
+	selectSideUseCase := veto.NewSelectSideUseCase(vetoSessionRepo, vetoActionRepo, mapPoolRepo, vetoLogicService)
 	resetSessionUseCase := veto.NewResetSessionUseCase(vetoSessionRepo, vetoActionRepo)
+	startSessionUseCase := veto.NewStartSessionUseCase(vetoSessionRepo)
+
+	// Инициализируем WebSocket manager
+	wsManager := ws.NewManager()
 
 	// Инициализируем handler
 	vetoHandler := NewVetoHandler(
@@ -50,6 +84,10 @@ func setupVetoTestRouter(t *testing.T) (*gin.Engine, func()) {
 		pickMapUseCase,
 		selectSideUseCase,
 		resetSessionUseCase,
+		startSessionUseCase,
+		mapPoolRepo,
+		roomRepo,
+		wsManager,
 	)
 
 	// Настраиваем роуты

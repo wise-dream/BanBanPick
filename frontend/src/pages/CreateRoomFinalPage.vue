@@ -5,10 +5,12 @@ import { useI18n } from '../composables/useI18n';
 import { useAuthStore } from '../store/auth';
 import { useRoomCreationStore } from '../store/roomCreation';
 import StepIndicator from '../components/common/StepIndicator.vue';
-import { Eye, EyeOff, Check } from 'lucide-vue-next';
+import { Check } from 'lucide-vue-next';
 import * as roomApi from '../services/api/roomService';
 import type { ApiError } from '../services/api/types';
 import { validateCreateRoomForm } from '../utils/validation';
+import InputText from 'primevue/inputtext';
+import Password from 'primevue/password';
 
 const router = useRouter();
 const { t } = useI18n();
@@ -17,7 +19,6 @@ const roomCreationStore = useRoomCreationStore();
 
 const roomName = ref('');
 const roomPassword = ref('');
-const showPassword = ref(false);
 // const showCodeCopied = ref(false); // Не используется
 const errors = ref<Record<string, string>>({});
 const isLoading = ref(false);
@@ -56,11 +57,17 @@ const handleCreateRoom = async () => {
   errors.value = {};
 
   try {
+    // Преобразуем bestOf (1, 3, 5) в veto_type ('bo1', 'bo3', 'bo5')
+    const vetoType = roomCreationStore.bestOf 
+      ? `bo${roomCreationStore.bestOf}` as 'bo1' | 'bo3' | 'bo5'
+      : undefined;
+    
     const response = await roomApi.createRoom({
       name: roomName.value.trim(),
       type: 'private', // Все комнаты из этого процесса приватные
       game_id: 1, // Valorant
       map_pool_id: roomCreationStore.selectedPool?.id,
+      veto_type: vetoType,
       max_participants: 2, // 2 участника (по одному от каждой команды)
     });
 
@@ -79,7 +86,7 @@ const handleCreateRoom = async () => {
   } catch (err) {
     const apiError = err as ApiError;
     if (apiError.code === 'HTTP_409') {
-      errors.value.name = 'Комната с таким именем уже существует';
+      errors.value.name = t('errors.roomNameExists');
     } else {
       createError.value = apiError.message || t('rooms.createError');
     }
@@ -111,14 +118,13 @@ const createError = ref<string | null>(null);
           
           <div class="form-group">
             <label for="roomName" class="form-label">{{ t('rooms.roomName') }}</label>
-            <input
+            <InputText
               id="roomName"
               v-model="roomName"
-              type="text"
-              class="form-input"
-              :class="{ error: errors.name }"
+              :class="{ 'p-invalid': errors.name }"
               :placeholder="t('rooms.roomNamePlaceholder')"
               maxlength="50"
+              class="w-full"
             />
             <span v-if="errors.name" class="error-message">{{ errors.name }}</span>
           </div>
@@ -127,25 +133,16 @@ const createError = ref<string | null>(null);
             <label for="roomPassword" class="form-label">
               {{ t('rooms.password') }} ({{ t('common.optional') }})
             </label>
-            <div class="password-input-wrapper">
-              <input
-                id="roomPassword"
-                v-model="roomPassword"
-                :type="showPassword ? 'text' : 'password'"
-                class="form-input"
-                :class="{ error: errors.password }"
-                :placeholder="t('rooms.passwordPlaceholder')"
-              />
-              <button
-                type="button"
-                class="password-toggle"
-                @click="showPassword = !showPassword"
-                :title="showPassword ? t('rooms.hidePassword') : t('rooms.showPassword')"
-              >
-                <Eye v-if="!showPassword" :size="18" />
-                <EyeOff v-else :size="18" />
-              </button>
-            </div>
+            <Password
+              id="roomPassword"
+              v-model="roomPassword"
+              :class="{ 'p-invalid': errors.password }"
+              :placeholder="t('rooms.passwordPlaceholder')"
+              :toggleMask="true"
+              :feedback="false"
+              inputClass="w-full"
+              class="w-full"
+            />
             <span v-if="errors.password" class="error-message">{{ errors.password }}</span>
             <span class="password-hint">{{ t('rooms.passwordHint') }}</span>
           </div>

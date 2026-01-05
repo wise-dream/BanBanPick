@@ -15,6 +15,7 @@ type RoomModel struct {
 	Status          string         `gorm:"not null;size:20;default:'waiting'"`
 	GameID          uint           `gorm:"not null;index"`
 	MapPoolID       *uint          `gorm:"index"`
+	VetoType        *string        `gorm:"size:10"` // Тип вето (bo1, bo3, bo5)
 	VetoSessionID   *uint       `gorm:"index"`
 	MaxParticipants int            `gorm:"default:10"`
 	CreatedAt       time.Time

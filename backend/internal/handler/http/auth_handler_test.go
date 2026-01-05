@@ -8,14 +8,14 @@ import (
 	"testing"
 
 	"github.com/bbp/backend/internal/handler/dto"
-	"github.com/bbp/backend/pkg/database"
-	"github.com/bbp/backend/pkg/jwt"
-	"github.com/bbp/backend/pkg/password"
 	"github.com/bbp/backend/internal/repository/models"
 	"github.com/bbp/backend/internal/repository/sqlite"
 	"github.com/bbp/backend/internal/usecase/auth"
+	"github.com/bbp/backend/pkg/database"
+	"github.com/bbp/backend/pkg/jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
 func setupTestDB(t *testing.T) (*gorm.DB, func()) {

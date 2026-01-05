@@ -8,16 +8,43 @@ import (
 	"testing"
 
 	"github.com/bbp/backend/internal/handler/dto"
+	"github.com/bbp/backend/internal/repository/models"
 	"github.com/bbp/backend/internal/repository/sqlite"
 	"github.com/bbp/backend/internal/usecase/room"
 	"github.com/bbp/backend/pkg/database"
-	"github.com/bbp/backend/internal/repository/models"
+	ws "github.com/bbp/backend/pkg/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"gorm.io/gorm"
 )
 
+func setupRoomTestDB(t *testing.T) (*gorm.DB, func()) {
+	db, err := database.NewDatabase(":memory:")
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+
+	// Миграции для всех моделей, используемых в тестах
+	if err := database.Migrate(db,
+		&models.UserModel{},
+		&models.GameModel{},
+		&models.MapModel{},
+		&models.MapPoolModel{},
+		&models.RoomModel{},
+		&models.RoomParticipantModel{},
+	); err != nil {
+		t.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	cleanup := func() {
+		database.Close(db)
+	}
+
+	return db, cleanup
+}
+
 func setupRoomTestRouter(t *testing.T) (*gin.Engine, func()) {
-	db, cleanup := setupTestDB(t)
+	db, cleanup := setupRoomTestDB(t)
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -30,19 +57,27 @@ func setupRoomTestRouter(t *testing.T) (*gin.Engine, func()) {
 	// Инициализируем use cases
 	createRoomUseCase := room.NewCreateRoomUseCase(roomRepo, gameRepo, mapPoolRepo)
 	getRoomUseCase := room.NewGetRoomUseCase(roomRepo)
+	getRoomBySessionUseCase := room.NewGetRoomBySessionUseCase(roomRepo)
 	getRoomsListUseCase := room.NewGetRoomsListUseCase(roomRepo)
 	joinRoomUseCase := room.NewJoinRoomUseCase(roomRepo)
 	leaveRoomUseCase := room.NewLeaveRoomUseCase(roomRepo)
 	deleteRoomUseCase := room.NewDeleteRoomUseCase(roomRepo)
+	updateRoomUseCase := room.NewUpdateRoomUseCase(roomRepo)
+
+	// Инициализируем WebSocket manager
+	wsManager := ws.NewManager()
 
 	// Инициализируем handler
 	roomHandler := NewRoomHandler(
 		createRoomUseCase,
 		getRoomUseCase,
+		getRoomBySessionUseCase,
 		getRoomsListUseCase,
 		joinRoomUseCase,
 		leaveRoomUseCase,
 		deleteRoomUseCase,
+		updateRoomUseCase,
+		wsManager,
 	)
 
 	// Настраиваем роуты
@@ -116,7 +151,7 @@ func TestRoomHandler_JoinRoom(t *testing.T) {
 	defer cleanup()
 
 	payload := dto.JoinRoomRequest{
-		Code: "TESTCODE",
+		Password: "testpassword",
 	}
 
 	body, _ := json.Marshal(payload)

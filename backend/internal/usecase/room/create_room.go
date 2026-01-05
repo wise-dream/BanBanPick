@@ -22,6 +22,7 @@ type CreateRoomInput struct {
 	Type            entities.RoomType
 	GameID          uint
 	MapPoolID       *uint
+	VetoType        *entities.VetoType // Тип вето (bo1, bo3, bo5)
 	MaxParticipants int
 	Password        *string // Пароль для приватных комнат (опционально)
 }
@@ -94,6 +95,15 @@ func (uc *CreateRoomUseCase) Execute(input CreateRoomInput) (*CreateRoomOutput, 
 		hashedPassword = &hashed
 	}
 
+	// Валидируем veto_type, если указан
+	if input.VetoType != nil {
+		if *input.VetoType != entities.VetoTypeBo1 && 
+		   *input.VetoType != entities.VetoTypeBo3 && 
+		   *input.VetoType != entities.VetoTypeBo5 {
+			return nil, ErrInvalidRoom
+		}
+	}
+	
 	// Создаем комнату
 	room := &entities.Room{
 		OwnerID:         input.OwnerID,
@@ -104,6 +114,7 @@ func (uc *CreateRoomUseCase) Execute(input CreateRoomInput) (*CreateRoomOutput, 
 		Status:          entities.RoomStatusWaiting,
 		GameID:          input.GameID,
 		MapPoolID:       input.MapPoolID,
+		VetoType:        input.VetoType,
 		MaxParticipants: maxParticipants,
 	}
 

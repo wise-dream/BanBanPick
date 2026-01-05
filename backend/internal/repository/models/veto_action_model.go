@@ -12,6 +12,7 @@ type VetoActionModel struct {
 	Team          string         `gorm:"not null;size:1"`
 	ActionType    string         `gorm:"not null;size:10"`
 	StepNumber    int            `gorm:"not null"`
+	SelectedSide  *string        `gorm:"size:20"` // attack или defence - для действий типа pick
 	CreatedAt     time.Time
 	DeletedAt     gorm.DeletedAt `gorm:"index"`
 }

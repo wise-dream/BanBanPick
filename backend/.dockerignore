@@ -1,0 +1,42 @@
+# Binaries
+bin/
+server
+seed
+
+# Database
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Scripts (не нужны в контейнере)
+*.sh
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+*_test.go
+**/__tests__/
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib

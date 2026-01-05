@@ -32,6 +32,7 @@ type RoomResponse struct {
 	Status          string               `json:"status"`
 	GameID          uint                 `json:"game_id"`
 	MapPoolID       *uint                `json:"map_pool_id,omitempty"`
+	VetoType        *string              `json:"veto_type,omitempty"` // Тип вето (bo1, bo3, bo5)
 	VetoSessionID   *uint                `json:"veto_session_id,omitempty"`
 	MaxParticipants int                  `json:"max_participants"`
 	CreatedAt       string               `json:"created_at"`
@@ -52,6 +53,12 @@ type RoomParticipantResponse struct {
 
 // ToRoomResponse конвертирует entity Room в RoomResponse
 func ToRoomResponse(room *entities.Room) RoomResponse {
+	var vetoTypeStr *string
+	if room.VetoType != nil {
+		s := string(*room.VetoType)
+		vetoTypeStr = &s
+	}
+	
 	response := RoomResponse{
 		ID:              room.ID,
 		OwnerID:         room.OwnerID,
@@ -61,6 +68,7 @@ func ToRoomResponse(room *entities.Room) RoomResponse {
 		Status:          string(room.Status),
 		GameID:          room.GameID,
 		MapPoolID:       room.MapPoolID,
+		VetoType:        vetoTypeStr,
 		VetoSessionID:   room.VetoSessionID,
 		MaxParticipants: room.MaxParticipants,
 		CreatedAt:       room.CreatedAt.Format(time.RFC3339),

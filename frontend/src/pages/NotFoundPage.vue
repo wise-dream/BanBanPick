@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import { useI18n } from '../composables/useI18n';
+
+const { t } = useI18n();
 
 const router = useRouter();
 </script>
@@ -7,10 +10,10 @@ const router = useRouter();
 <template>
   <div class="not-found-page">
     <div class="not-found-content">
-      <h1>404</h1>
-      <p>Page not found</p>
+      <h1>{{ t('notFound.title') }}</h1>
+      <p>{{ t('notFound.message') }}</p>
       <button @click="router.push('/')" class="btn-home">
-        Go to Home
+        {{ t('notFound.goHome') }}
       </button>
     </div>
   </div>

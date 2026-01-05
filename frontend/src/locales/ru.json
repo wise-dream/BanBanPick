@@ -24,6 +24,13 @@
     "register": "Зарегистрироваться",
     "loading": "Загрузка...",
     "invalidCredentials": "Неверный email или пароль",
+    "emailAlreadyExists": "Email уже используется",
+    "usernameAlreadyExists": "Имя пользователя уже занято",
+    "registerError": "Ошибка при регистрации. Попробуйте еще раз.",
+    "loginError": "Ошибка при входе. Попробуйте еще раз.",
+    "networkError": "Ошибка сети. Проверьте подключение к интернету.",
+    "validationError": "Ошибка валидации данных. Проверьте введенные данные.",
+    "rateLimitError": "Слишком много запросов. Попробуйте позже.",
     "noAccount": "Нет аккаунта?",
     "haveAccount": "Уже есть аккаунт?"
   },
@@ -68,11 +75,41 @@
     "ban": "Ban",
     "banned": "Забанена",
     "available": "Доступна для бана",
-    "selected": "Выбрана для игры"
+    "availableForPick": "Доступна для выбора",
+    "selected": "Выбрана для игры",
+    "mapBanning": "Map Banning",
+    "allMaps": "All maps",
+    "step": "Шаг",
+    "sideSelectionStep": "Выбор стороны",
+    "pickTurnStep": "Ход выбора карты",
+    "banTurnStep": "Ход бана",
+    "selectsSideOn": "выбирает сторону на",
+    "lastSelectedMap": "последней выбранной карте",
+    "attack": "ATTACK",
+    "defence": "DEFENCE",
+    "loadingSession": "Загрузка сессии...",
+    "loadingPool": "Загрузка пула карт...",
+    "backToPoolSelection": "Вернуться к выбору пула",
+    "sessionNotStarted": "Сессия еще не начата. Нажмите \"Начать\" для начала вето.",
+    "notYourTurn": "Сейчас очередь команды \"{name}\". Дождитесь своего хода.",
+    "mapNotAvailable": "Карта \"{mapName}\" недоступна",
+    "mapNotFound": "Карта \"{mapName}\" не найдена",
+    "sideSelectionUnavailable": "Выбор стороны сейчас недоступен",
+    "sideSelectionNotYourTurn": "Сейчас очередь команды \"{teamName}\" выбрать сторону",
+    "sessionNotLoaded": "Сессия не загружена",
+    "cannotFinishSide": "Сначала завершите вето и выберите карту.",
+    "pickError": "Не удалось отправить пик через WebSocket",
+    "banError": "Не удалось отправить бан через WebSocket",
+    "createSessionError": "Не удалось создать сессию",
+    "logAndResult": "Лог и итог",
+    "selectedMap": "Выбранная карта",
+    "noMapSelected": "Пока карта не выбрана. Баньте, пока не останется одна.",
+    "mapWillBePlayed": "Играется карта: {mapName}. Сторону выбираете при заходе в лобби.",
+    "vetoTurn": "Ход вето"
   },
   "bestOf": {
     "title": "Выберите Best of",
-    "description": "Выберите Best of 1, 2, 3 или 5",
+    "description": "Выберите Best of 1, 3 или 5",
     "hint": "Например, 'Best Of 5' означает, что команда, которая выиграет 3 карты, выигрывает серию."
   },
   "createRoom": {
@@ -187,6 +224,89 @@
     "back": "Назад",
     "retry": "Повторить",
     "loading": "Загрузка...",
-    "save": "Сохранить"
+    "save": "Сохранить",
+    "ok": "OK",
+    "close": "Закрыть"
+  },
+  "errors": {
+    "poolOrTokenNotProvided": "Не указан пул карт или токен сессии",
+    "poolNotFound": "Пул карт не найден",
+    "poolLoadError": "Не удалось загрузить пул карт",
+    "poolEmpty": "Пул карт не содержит карт",
+    "poolNotFoundOrEmpty": "Пул карт не найден или не содержит карт",
+    "poolNotSet": "Пул карт не указан в сессии",
+    "poolNotLoaded": "Пул карт не загружен",
+    "sessionLoadError": "Не удалось загрузить сессию",
+    "roomsLoadError": "Не удалось загрузить комнаты",
+    "roomCreateError": "Не удалось создать комнату",
+    "roomJoinError": "Не удалось присоединиться к комнате",
+    "roomNotFound": "Комната не найдена",
+    "roomLoadError": "Не удалось загрузить комнату",
+    "startVetoError": "Не удалось начать вето",
+    "leaveRoomError": "Не удалось выйти",
+    "poolsLoadError": "Не удалось загрузить пулы карт",
+    "saveSettingsError": "Не удалось сохранить настройки",
+    "profileLoadError": "Не удалось загрузить профиль",
+    "profileUpdateError": "Не удалось обновить профиль",
+    "roomNameExists": "Комната с таким именем уже существует",
+    "poolNameExists": "Пул с таким именем уже существует"
+  },
+  "finalOverlay": {
+    "thisMapWillBePlayed": "Эта карта будет сыграна",
+    "vetoResult": "Veto result",
+    "map": "Map",
+    "sides": "Sides"
+  },
+  "home": {
+    "title": "Valorant Map Ban Tool",
+    "description": "Create and manage map veto sessions for your Valorant matches",
+    "startVetoProcess": "Start Veto Process"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Страница не найдена",
+    "goHome": "Вернуться на главную"
+  },
+  "footer": {
+    "copyright": "Все права защищены"
+  },
+  "rooms": {
+    "settings": {
+      "title": "Настройки комнаты",
+      "vetoTypeLabel": "Тип вето (Best of)",
+      "vetoTypePlaceholder": "Выберите тип вето",
+      "mapPoolLabel": "Пул карт",
+      "mapPoolPlaceholder": "Выберите пул карт",
+      "saving": "Сохранение...",
+      "selectPoolPlaceholder": "Выберите пул карт"
+    }
+  },
+  "bestOf": {
+    "selectBestOfPlaceholder": "Выберите Best of",
+    "selectRoomTypePlaceholder": "Выберите тип комнаты"
+  },
+  "profile": {
+    "updateUsernameError": "Имя пользователя уже занято"
+  },
+  "vetoSession": {
+    "sessionCreated": "Сессия вето {type} создана.",
+    "teamInfo": "Команда A: {teamA}, Команда B: {teamB}.",
+    "createError": "Не удалось создать сессию",
+    "loadError": "Не удалось загрузить сессию",
+    "sessionNotLoaded": "Сессия не загружена",
+    "mapNotFound": "Карта не найдена",
+    "banError": "Не удалось забанить карту",
+    "pickError": "Не удалось выбрать карту",
+    "sideAttack": "атака",
+    "sideDefence": "защита",
+    "sideSelected": "{teamName} выбирает сторону: {sideText}.",
+    "selectSideError": "Не удалось выбрать сторону",
+    "reset": "Сессия сброшена.",
+    "resetError": "Не удалось сбросить сессию",
+    "nextActionError": "Не удалось получить следующее действие",
+    "unknownMap": "неизвестная карта",
+    "banAction": "{teamName} банит карту {mapName}.",
+    "pickAction": "{teamName} выбирает карту {mapName}.",
+    "autoPick": "Автопик: последняя оставшаяся карта {mapName} выбирается для игры."
   }
 }

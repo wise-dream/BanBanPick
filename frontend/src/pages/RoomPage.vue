@@ -5,11 +5,14 @@
   import { useAuthStore } from '../store/auth'
   import RoomPasswordModal from '../components/rooms/RoomPasswordModal.vue'
   import type { Room } from '../types'
-  import { Users, Copy, Play, ArrowLeft } from 'lucide-vue-next'
+  import { Users, Copy, Play, ArrowLeft, Settings } from 'lucide-vue-next'
   import * as roomApi from '../services/api/roomService'
   import * as vetoService from '../services/api/vetoService'
   import type { ApiError } from '../services/api/types'
   import { useRoomWebSocket } from '../composables/useRoomWebSocket'
+  import { getAllPools } from '../services/mapPoolService'
+  import type { MapPool } from '../types'
+  import Select from 'primevue/select'
 
   interface Props {
     roomId?: string
@@ -30,8 +33,30 @@
   const showCodeCopied = ref(false)
   const showPasswordModal = ref(false)
   const pendingJoin = ref(false)
+  const showSettingsModal = ref(false)
 
   const hasRedirectedToVeto = ref(false)
+  
+  // Состояние для редактирования настроек
+  const availablePools = ref<MapPool[]>([])
+  const editingVetoType = ref<'bo1' | 'bo3' | 'bo5' | null>(null)
+  const editingMapPoolId = ref<number | null>(null)
+  const isSavingSettings = ref(false)
+
+  // Опции для PrimeVue Select
+  const vetoTypeOptions = computed(() => [
+    { label: 'Best of 1', value: 'bo1' },
+    { label: 'Best of 3', value: 'bo3' },
+    { label: 'Best of 5', value: 'bo5' }
+  ])
+
+  const mapPoolOptionsForSettings = computed(() => [
+    { label: t('rooms.settings.selectPoolPlaceholder'), value: null },
+    ...availablePools.value.map(pool => ({
+      label: pool.name,
+      value: pool.id
+    }))
+  ])
 
   const roomWs = shallowRef<ReturnType<typeof useRoomWebSocket> | null>(null)
   const lastProcessedMessageIndex = ref(-1)
@@ -172,8 +197,8 @@
       const apiError = err as ApiError
       error.value =
         apiError.code === 'HTTP_404'
-          ? 'Комната не найдена'
-          : apiError.message || 'Не удалось загрузить комнату'
+          ? t('errors.roomNotFound')
+          : apiError.message || t('errors.roomLoadError')
     } finally {
       isLoading.value = false
     }
@@ -229,7 +254,7 @@
       room.value = roomApi.roomResponseToRoom(response)
     } catch (err) {
       const apiError = err as ApiError
-      error.value = apiError.message || 'Не удалось присоединиться'
+      error.value = apiError.message || t('errors.roomJoinError')
       setTimeout(() => (error.value = null), 3000)
     } finally {
       pendingJoin.value = false
@@ -248,10 +273,13 @@
       const teamAName = teamAParticipant.value?.username || `Team ${teamAParticipant.value?.userId || 'A'}`
       const teamBName = teamBParticipant.value?.username || `Team ${teamBParticipant.value?.userId || 'B'}`
       
+      // Используем veto_type из комнаты, или 'bo1' по умолчанию
+      const vetoType = room.value.vetoType || 'bo1'
+      
       const session = await vetoService.createSession({
         game_id: room.value.gameId,
         map_pool_id: room.value.mapPoolId,
-        type: 'bo1',
+        type: vetoType,
         team_a_name: teamAName,
         team_b_name: teamBName,
         timer_seconds: 60,
@@ -299,16 +327,77 @@
       roomWs.value = null
 
       await roomApi.leaveRoom(Number(roomId.value))
-      isOwner.value ? router.push('/rooms') : await loadRoom()
+      // Всегда редиректим на список комнат после выхода
+      router.push('/rooms')
     } catch (err) {
       const apiError = err as ApiError
-      error.value = apiError.message || 'Не удалось выйти'
+      error.value = apiError.message || t('errors.leaveRoomError')
       setTimeout(() => (error.value = null), 3000)
+      // В случае ошибки тоже редиректим (пользователь больше не участник)
+      router.push('/rooms')
     } finally {
       isLoading.value = false
     }
   }
 
+  const canEditSettings = computed(() => {
+    // Можно редактировать настройки если:
+    // 1. Пользователь - владелец комнаты
+    // 2. Комната в статусе waiting ИЛИ сессия не начата (not_started)
+    if (!isOwner.value || !room.value) return false
+    
+    // Если сессии нет - можно редактировать
+    if (!room.value.vetoSessionId) return true
+    
+    // Если сессия есть, нужно проверить её статус (будет реализовано позже через загрузку сессии)
+    // Пока разрешаем редактирование если статус комнаты waiting
+    return room.value.status === 'waiting'
+  })
+  
+  const handleOpenSettings = async () => {
+    if (!room.value) return
+    
+    // Загружаем доступные пулы карт
+    try {
+      const pools = await getAllPools()
+      availablePools.value = pools
+    } catch (err) {
+      console.error('Error loading pools:', err)
+      error.value = 'Не удалось загрузить пулы карт'
+      return
+    }
+    
+    // Устанавливаем текущие значения
+    editingVetoType.value = room.value.vetoType || 'bo1'
+    editingMapPoolId.value = room.value.mapPoolId || null
+    
+    showSettingsModal.value = true
+  }
+  
+  const handleSaveSettings = async () => {
+    if (!room.value || !roomId.value || isSavingSettings.value) return
+    
+    isSavingSettings.value = true
+    error.value = null
+    
+    try {
+      await roomApi.updateRoom(Number(roomId.value), {
+        veto_type: editingVetoType.value || undefined,
+        map_pool_id: editingMapPoolId.value || undefined,
+      })
+      
+      // Обновляем комнату после сохранения
+      await loadRoom()
+      showSettingsModal.value = false
+    } catch (err) {
+      const apiError = err as ApiError
+      error.value = apiError.message || t('errors.saveSettingsError')
+      setTimeout(() => (error.value = null), 3000)
+    } finally {
+      isSavingSettings.value = false
+    }
+  }
+  
   const handleGoToVeto = async () => {
     if (!room.value?.vetoSessionId) return
 
@@ -329,6 +418,18 @@
       case 'room:leave':
       case 'room:participants:updated':
         loadRoom()
+        break
+      case 'room:state':
+        // Обновляем veto_type и map_pool_id из WebSocket сообщения
+        if (message.data && room.value) {
+          if (message.data.veto_type !== undefined) {
+            room.value.vetoType = message.data.veto_type || undefined
+          }
+          if (message.data.map_pool_id !== undefined) {
+            room.value.mapPoolId = message.data.map_pool_id || undefined
+          }
+        }
+        loadRoom() // Перезагружаем для получения полных данных
         break
       case 'room:deleted':
         router.push('/rooms')
@@ -433,6 +534,14 @@
 
             <div v-else-if="isParticipant" class="action-buttons">
               <button
+                v-if="canEditSettings"
+                class="btn btn-secondary"
+                @click="handleOpenSettings"
+              >
+                <Settings :size="18" />
+                Настройки
+              </button>
+              <button
                 v-if="isOwner && isFull && room.status === 'waiting'"
                 class="btn btn-primary btn-large"
                 @click="handleStartVeto"
@@ -467,6 +576,53 @@
           @close="showPasswordModal = false; pendingJoin = false"
           @submit="handlePasswordSubmit"
         />
+        
+        <!-- Settings Modal -->
+        <div v-if="showSettingsModal" class="modal-overlay" @click.self="showSettingsModal = false">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>Настройки комнаты</h2>
+              <button class="modal-close" @click="showSettingsModal = false">×</button>
+            </div>
+            
+            <div class="modal-body">
+              <div class="form-group">
+                <label class="form-label">{{ t('rooms.settings.vetoTypeLabel') }}</label>
+                <Select
+                  v-model="editingVetoType"
+                  :options="vetoTypeOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  :placeholder="t('rooms.settings.vetoTypePlaceholder')"
+                  fluid
+                />
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">{{ t('rooms.settings.mapPoolLabel') }}</label>
+                <Select
+                  v-model="editingMapPoolId"
+                  :options="mapPoolOptionsForSettings"
+                  optionLabel="label"
+                  optionValue="value"
+                  :placeholder="t('rooms.settings.mapPoolPlaceholder')"
+                  fluid
+                />
+              </div>
+              
+              <div v-if="error" class="error-message">{{ error }}</div>
+            </div>
+            
+            <div class="modal-footer">
+              <button class="btn btn-secondary" @click="showSettingsModal = false" :disabled="isSavingSettings">
+                {{ t('common.cancel') }}
+              </button>
+              <button class="btn btn-primary" @click="handleSaveSettings" :disabled="isSavingSettings">
+                {{ isSavingSettings ? t('rooms.settings.saving') : t('common.save') }}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </template>
@@ -752,6 +908,117 @@
     text-align: center;
     color: rgba(255, 255, 255, 0.7);
   }
+  
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+  
+  .modal-content {
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    color: white;
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+  
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  
+  .modal-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+  }
+  
+  .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+  
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+  
+  .form-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .form-input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: rgba(255, 255, 255, 0.15);
+  }
+  
+  .form-input option {
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+  }
+  
 
   @media (max-width: 768px) {
     .room-header {

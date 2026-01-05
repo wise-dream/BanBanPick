@@ -24,6 +24,13 @@
     "register": "Register",
     "loading": "Loading...",
     "invalidCredentials": "Invalid email or password",
+    "emailAlreadyExists": "Email is already in use",
+    "usernameAlreadyExists": "Username is already taken",
+    "registerError": "Registration error. Please try again.",
+    "loginError": "Login error. Please try again.",
+    "networkError": "Network error. Please check your internet connection.",
+    "validationError": "Validation error. Please check your input.",
+    "rateLimitError": "Too many requests. Please try again later.",
     "noAccount": "Don't have an account?",
     "haveAccount": "Already have an account?"
   },
@@ -68,11 +75,41 @@
     "ban": "Ban",
     "banned": "Banned",
     "available": "Available for ban",
-    "selected": "Selected for play"
+    "availableForPick": "Available for pick",
+    "selected": "Selected for play",
+    "mapBanning": "Map Banning",
+    "allMaps": "All maps",
+    "step": "Step",
+    "sideSelectionStep": "Side selection",
+    "pickTurnStep": "Pick turn",
+    "banTurnStep": "Ban turn",
+    "selectsSideOn": "selects side on",
+    "lastSelectedMap": "last selected map",
+    "attack": "ATTACK",
+    "defence": "DEFENCE",
+    "loadingSession": "Loading session...",
+    "loadingPool": "Loading map pool...",
+    "backToPoolSelection": "Back to pool selection",
+    "sessionNotStarted": "Session not started. Click \"Start\" to begin veto.",
+    "notYourTurn": "It's currently {name}'s turn. Wait for your turn.",
+    "mapNotAvailable": "Map \"{mapName}\" is not available",
+    "mapNotFound": "Map \"{mapName}\" not found",
+    "sideSelectionUnavailable": "Side selection is currently unavailable",
+    "sideSelectionNotYourTurn": "It's currently {teamName}'s turn to select side",
+    "sessionNotLoaded": "Session not loaded",
+    "cannotFinishSide": "First complete the veto and select a map.",
+    "pickError": "Failed to send pick via WebSocket",
+    "banError": "Failed to send ban via WebSocket",
+    "createSessionError": "Failed to create session",
+    "logAndResult": "Log and Result",
+    "selectedMap": "Selected Map",
+    "noMapSelected": "No map selected yet. Ban until one remains.",
+    "mapWillBePlayed": "Map to be played: {mapName}. Select side when entering the lobby.",
+    "vetoTurn": "Veto turn"
   },
   "bestOf": {
     "title": "Select Best of",
-    "description": "Choose Best of 1, 2, 3 or 5",
+    "description": "Choose Best of 1, 3 or 5",
     "hint": "For example 'Best Of 5' means the team that wins 3 maps, wins the series."
   },
   "createRoom": {
@@ -187,6 +224,89 @@
     "back": "Back",
     "retry": "Retry",
     "loading": "Loading...",
-    "save": "Save"
+    "save": "Save",
+    "ok": "OK",
+    "close": "Close"
+  },
+  "errors": {
+    "poolOrTokenNotProvided": "Map pool or session token not provided",
+    "poolNotFound": "Map pool not found",
+    "poolLoadError": "Failed to load map pool",
+    "poolEmpty": "Map pool contains no maps",
+    "poolNotFoundOrEmpty": "Map pool not found or contains no maps",
+    "poolNotSet": "Map pool not set in session",
+    "poolNotLoaded": "Map pool not loaded",
+    "sessionLoadError": "Failed to load session",
+    "roomsLoadError": "Failed to load rooms",
+    "roomCreateError": "Failed to create room",
+    "roomJoinError": "Failed to join room",
+    "roomNotFound": "Room not found",
+    "roomLoadError": "Failed to load room",
+    "startVetoError": "Failed to start veto",
+    "leaveRoomError": "Failed to leave room",
+    "poolsLoadError": "Failed to load map pools",
+    "saveSettingsError": "Failed to save settings",
+    "profileLoadError": "Failed to load profile",
+    "profileUpdateError": "Failed to update profile",
+    "roomNameExists": "Room with this name already exists",
+    "poolNameExists": "Map pool with this name already exists"
+  },
+  "finalOverlay": {
+    "thisMapWillBePlayed": "This map will be played",
+    "vetoResult": "Veto result",
+    "map": "Map",
+    "sides": "Sides"
+  },
+  "home": {
+    "title": "Valorant Map Ban Tool",
+    "description": "Create and manage map veto sessions for your Valorant matches",
+    "startVetoProcess": "Start Veto Process"
+  },
+  "notFound": {
+    "title": "404",
+    "message": "Page not found",
+    "goHome": "Go to Home"
+  },
+  "footer": {
+    "copyright": "All rights reserved"
+  },
+  "rooms": {
+    "settings": {
+      "title": "Room Settings",
+      "vetoTypeLabel": "Veto Type (Best of)",
+      "vetoTypePlaceholder": "Select veto type",
+      "mapPoolLabel": "Map Pool",
+      "mapPoolPlaceholder": "Select map pool",
+      "saving": "Saving...",
+      "selectPoolPlaceholder": "Select map pool"
+    }
+  },
+  "bestOf": {
+    "selectBestOfPlaceholder": "Select Best of",
+    "selectRoomTypePlaceholder": "Select room type"
+  },
+  "profile": {
+    "updateUsernameError": "Username is already taken"
+  },
+  "vetoSession": {
+    "sessionCreated": "Veto session {type} created.",
+    "teamInfo": "Team A: {teamA}, Team B: {teamB}.",
+    "createError": "Failed to create session",
+    "loadError": "Failed to load session",
+    "sessionNotLoaded": "Session not loaded",
+    "mapNotFound": "Map not found",
+    "banError": "Failed to ban map",
+    "pickError": "Failed to pick map",
+    "sideAttack": "attack",
+    "sideDefence": "defence",
+    "sideSelected": "{teamName} selects side: {sideText}.",
+    "selectSideError": "Failed to select side",
+    "reset": "Session reset.",
+    "resetError": "Failed to reset session",
+    "nextActionError": "Failed to get next action",
+    "unknownMap": "unknown map",
+    "banAction": "{teamName} bans map {mapName}.",
+    "pickAction": "{teamName} picks map {mapName}.",
+    "autoPick": "Autopick: the last remaining map {mapName} is selected for play."
   }
 }

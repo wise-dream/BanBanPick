@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from '../composables/useI18n';
 import type { LogEntry, MapName } from '../types/veto';
+
+const { t } = useI18n();
 
 interface Props {
   pickedMap: MapName | null;
@@ -20,16 +23,16 @@ const summaryText = computed(() => {
 <template>
   <section class="panel">
     <div class="panel-header">
-      <div class="panel-title">Лог и итог</div>
+      <div class="panel-title">{{ t('veto.logAndResult') }}</div>
     </div>
 
     <div class="summary">
-      <div class="summary-title">Выбранная карта</div>
+      <div class="summary-title">{{ t('veto.selectedMap') }}</div>
       <div>{{ summaryText }}</div>
     </div>
 
     <div class="panel-header" style="margin-top:8px;">
-      <div class="panel-title" style="font-size:13px;">Ход вето</div>
+      <div class="panel-title" style="font-size:13px;">{{ t('veto.vetoTurn') }}</div>
     </div>
     <div class="log">
       <div

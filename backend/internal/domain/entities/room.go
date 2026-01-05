@@ -30,6 +30,7 @@ type Room struct {
 	Status          RoomStatus   `json:"status"`
 	GameID          uint         `json:"game_id"`
 	MapPoolID       *uint        `json:"map_pool_id,omitempty"`
+	VetoType        *VetoType    `json:"veto_type,omitempty"` // Тип вето (bo1, bo3, bo5)
 	VetoSessionID   *uint        `json:"veto_session_id,omitempty"`
 	MaxParticipants int          `json:"max_participants"`
 	CreatedAt       time.Time    `json:"created_at"`

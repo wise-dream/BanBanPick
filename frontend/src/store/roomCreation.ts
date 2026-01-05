@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import type { MapPool } from '../types';
 
-export type BestOfType = 1 | 2 | 3 | 5;
+export type BestOfType = 1 | 3 | 5;
 
 export interface RoomCreationState {
   selectedPool: MapPool | null;

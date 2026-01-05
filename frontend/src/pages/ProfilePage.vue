@@ -48,7 +48,7 @@ const loadProfile = async () => {
       authStore.logout();
       router.push('/login');
     } else {
-      error.value = apiError.message || 'Не удалось загрузить профиль';
+      error.value = apiError.message || t('errors.profileLoadError');
     }
   }
 };
@@ -75,12 +75,12 @@ const handleUpdateProfile = async () => {
   editErrors.value = {};
 
   if (!editUsername.value.trim()) {
-    editErrors.value.username = 'Имя пользователя обязательно';
+    editErrors.value.username = t('auth.usernameRequired');
     return;
   }
 
   if (editUsername.value.length < 3) {
-    editErrors.value.username = 'Имя пользователя должно быть не менее 3 символов';
+    editErrors.value.username = t('auth.usernameMinLength');
     return;
   }
 
@@ -106,9 +106,9 @@ const handleUpdateProfile = async () => {
   } catch (err) {
     const apiError = err as ApiError;
     if (apiError.code === 'HTTP_409') {
-      editErrors.value.username = 'Имя пользователя уже занято';
+      editErrors.value.username = t('profile.updateUsernameError');
     } else {
-      editErrors.value.username = apiError.message || 'Не удалось обновить профиль';
+      editErrors.value.username = apiError.message || t('errors.profileUpdateError');
     }
   }
 };
@@ -139,7 +139,7 @@ const formatDate = (dateString: string) => {
       <div v-else-if="error" class="error-state">
         <p>{{ error }}</p>
         <button class="btn btn-primary" @click="loadProfile">
-          {{ t('common.retry') || 'Повторить' }}
+          {{ t('common.retry') }}
         </button>
       </div>
 
@@ -151,14 +151,14 @@ const formatDate = (dateString: string) => {
         <!-- Profile Info Section -->
         <div class="profile-section">
           <div class="section-header">
-            <h2 class="section-title">{{ t('profile.info') || 'Информация' }}</h2>
+            <h2 class="section-title">{{ t('profile.info') }}</h2>
             <button
               v-if="!isEditing"
               class="btn btn-secondary btn-small"
               @click="isEditing = true"
             >
               <Edit2 :size="16" />
-              {{ t('profile.edit') || 'Редактировать' }}
+              {{ t('profile.edit') }}
             </button>
           </div>
 
@@ -168,11 +168,11 @@ const formatDate = (dateString: string) => {
               <span class="info-value">{{ profile.email }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">{{ t('profile.username') || 'Имя пользователя' }}:</span>
+              <span class="info-label">{{ t('profile.username') }}:</span>
               <span class="info-value">{{ profile.username }}</span>
             </div>
             <div class="info-item">
-              <span class="info-label">{{ t('profile.memberSince') || 'Участник с' }}:</span>
+              <span class="info-label">{{ t('profile.memberSince') }}:</span>
               <span class="info-value">
                 <Calendar :size="16" />
                 {{ formatDate(profile.created_at) }}
@@ -183,7 +183,7 @@ const formatDate = (dateString: string) => {
           <div v-else class="edit-form">
             <div class="form-group">
               <label for="username" class="form-label">
-                {{ t('profile.username') || 'Имя пользователя' }}
+                {{ t('profile.username') }}
               </label>
               <input
                 id="username"
@@ -199,10 +199,10 @@ const formatDate = (dateString: string) => {
             </div>
             <div class="form-actions">
               <button class="btn btn-secondary" @click="cancelEdit">
-                {{ t('common.cancel') || 'Отмена' }}
+                {{ t('common.cancel') }}
               </button>
               <button class="btn btn-primary" @click="handleUpdateProfile">
-                {{ t('common.save') || 'Сохранить' }}
+                {{ t('common.save') }}
               </button>
             </div>
           </div>
@@ -213,12 +213,12 @@ const formatDate = (dateString: string) => {
           <div class="section-header">
             <h2 class="section-title">
               <Map :size="20" />
-              {{ t('profile.sessions') || 'Сессии вето' }} ({{ sessions.length }})
+              {{ t('profile.sessions') }} ({{ sessions.length }})
             </h2>
           </div>
 
           <div v-if="sessions.length === 0" class="empty-state">
-            <p>{{ t('profile.noSessions') || 'У вас пока нет сессий вето' }}</p>
+            <p>{{ t('profile.noSessions') }}</p>
           </div>
 
           <div v-else class="sessions-list">
@@ -248,14 +248,14 @@ const formatDate = (dateString: string) => {
           <div class="section-header">
             <h2 class="section-title">
               <Users :size="20" />
-              {{ t('profile.rooms') || 'Мои комнаты' }} ({{ rooms.length }})
+              {{ t('profile.rooms') }} ({{ rooms.length }})
             </h2>
           </div>
 
           <div v-if="rooms.length === 0" class="empty-state">
-            <p>{{ t('profile.noRooms') || 'У вас пока нет комнат' }}</p>
+            <p>{{ t('profile.noRooms') }}</p>
             <button class="btn btn-primary" @click="router.push('/rooms')">
-              {{ t('rooms.createRoom') || 'Создать комнату' }}
+              {{ t('rooms.createRoom') }}
             </button>
           </div>
 

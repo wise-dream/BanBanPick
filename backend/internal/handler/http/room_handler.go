@@ -107,12 +107,19 @@ func (h *RoomHandler) CreateRoom(c *gin.Context) {
 		maxParticipants = *req.MaxParticipants
 	}
 
+	var vetoType *entities.VetoType
+	if req.VetoType != nil {
+		vt := entities.VetoType(*req.VetoType)
+		vetoType = &vt
+	}
+	
 	result, err := h.createRoomUseCase.Execute(room.CreateRoomInput{
 		OwnerID:         user.ID,
 		Name:            req.Name,
 		Type:            entities.RoomType(req.Type),
 		GameID:          req.GameID,
 		MapPoolID:       req.MapPoolID,
+		VetoType:        vetoType,
 		MaxParticipants: maxParticipants,
 		Password:        req.Password,
 	})
@@ -373,10 +380,19 @@ func (h *RoomHandler) UpdateRoom(c *gin.Context) {
 		s := entities.RoomStatus(*req.Status)
 		status = &s
 	}
+	
+	// Преобразуем veto_type из строки в VetoType
+	var vetoType *entities.VetoType
+	if req.VetoType != nil {
+		vt := entities.VetoType(*req.VetoType)
+		vetoType = &vt
+	}
 
 	result, err := h.updateRoomUseCase.Execute(room.UpdateRoomInput{
 		RoomID:        uint(id),
 		UserID:        user.ID,
+		MapPoolID:     req.MapPoolID,
+		VetoType:      vetoType,
 		VetoSessionID: req.VetoSessionID,
 		Status:        status,
 	})
@@ -395,12 +411,19 @@ func (h *RoomHandler) UpdateRoom(c *gin.Context) {
 
 	// Отправляем WebSocket сообщение об обновлении комнаты
 	if h.wsManager != nil {
+		var vetoTypeStr *string
+		if result.Room.VetoType != nil {
+			s := string(*result.Room.VetoType)
+			vetoTypeStr = &s
+		}
+		
 		h.wsManager.BroadcastToRoom(uint(id), ws.Message{
 			Type: "room:state",
 			Data: map[string]interface{}{
 				"room_id":        uint(id),
 				"veto_session_id": result.Room.VetoSessionID,
 				"map_pool_id":     result.Room.MapPoolID,
+				"veto_type":       vetoTypeStr,
 				"status":          result.Room.Status,
 			},
 		})

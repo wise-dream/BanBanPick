@@ -30,7 +30,6 @@ onMounted(() => {
 
 const bestOfOptions: Array<{ value: BestOfType; label: string; stars: number }> = [
   { value: 1, label: 'Best of 1', stars: 1 },
-  { value: 2, label: 'Best of 2', stars: 2 },
   { value: 3, label: 'Best of 3', stars: 3 },
   { value: 5, label: 'Best of 5', stars: 0 } // 0 означает сплошной круг
 ];

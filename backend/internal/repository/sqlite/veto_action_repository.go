@@ -22,6 +22,7 @@ func (r *vetoActionRepository) Create(action *entities.VetoAction) error {
 		Team:          action.Team,
 		ActionType:    string(action.ActionType),
 		StepNumber:    action.StepNumber,
+		SelectedSide:  action.SelectedSide,
 	}
 
 	if err := r.db.Create(model).Error; err != nil {
@@ -51,6 +52,13 @@ func (r *vetoActionRepository) DeleteBySessionID(sessionID uint) error {
 	return r.db.Where("veto_session_id = ?", sessionID).Delete(&models.VetoActionModel{}).Error
 }
 
+func (r *vetoActionRepository) Update(action *entities.VetoAction) error {
+	model := &models.VetoActionModel{
+		SelectedSide: action.SelectedSide,
+	}
+	return r.db.Model(&models.VetoActionModel{}).Where("id = ?", action.ID).Update("selected_side", model.SelectedSide).Error
+}
+
 func (r *vetoActionRepository) Delete(id uint) error {
 	return r.db.Delete(&models.VetoActionModel{}, id).Error
 }
@@ -63,6 +71,7 @@ func toVetoActionEntity(model *models.VetoActionModel) *entities.VetoAction {
 		Team:          model.Team,
 		ActionType:    entities.VetoActionType(model.ActionType),
 		StepNumber:    model.StepNumber,
+		SelectedSide:  model.SelectedSide,
 		CreatedAt:     model.CreatedAt,
 	}
 }
