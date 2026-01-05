@@ -28,6 +28,7 @@ export interface UseVetoSessionOptions {
 
 export function useVetoSession(options?: UseVetoSessionOptions) {
   const { showError } = useErrorToast();
+  const { t } = useI18n();
 
   const sessionId = ref<number | null>(null);
   const session = ref<VetoSessionResponse | null>(null);
